@@ -1,3 +1,9 @@
-data/
+00_data/
 __pycache__/
-misc/
+71_misc/
+80_models/
+99_evaluation/
+.venv/
+*.xml
+runs/
+*.pt
