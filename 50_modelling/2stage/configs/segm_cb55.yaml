@@ -1,0 +1,45 @@
+# Segmentation training config — CB55 dataset
+# Full mode:  python train.py --task segm --config configs/segm_cb55.yaml
+# FSL mode:   python train.py --task segm --config configs/segm_cb55.yaml --mode fsl
+
+# ---------------------------------------------------------------------------
+# Data — full dataset splits
+# ---------------------------------------------------------------------------
+train_img_dir: ../00_data/DIVA-HisDB/CB55/img-CB55/img/training/
+train_xml_dir: ../00_data/DIVA-HisDB/CB55/PAGE-gt-CB55/PAGE-gt/training/
+
+val_img_dir: ../00_data/DIVA-HisDB/CB55/img-CB55/img/validation/
+val_xml_dir: ../00_data/DIVA-HisDB/CB55/PAGE-gt-CB55/PAGE-gt/validation/
+
+test_img_dir: ../00_data/DIVA-HisDB/CB55/img-CB55/img/public-test/
+test_xml_dir: ../00_data/DIVA-HisDB/CB55/PAGE-gt-CB55/PAGE-gt/public-test/
+
+# ---------------------------------------------------------------------------
+# FSL settings (only used with --mode fsl)
+# ---------------------------------------------------------------------------
+fsl_k_values: [1, 2, 5, 10]          # k values to sweep
+fsl_method: grayscale_variance        # grayscale_variance | random | pca_max_distance | ...
+fsl_precomputed: null                 # path to pre-computed diversity file, or null
+fsl_seed: 42                          # random seed (used when fsl_method=random)
+
+# ---------------------------------------------------------------------------
+# Model
+# ---------------------------------------------------------------------------
+architecture: unet        # unet | segformer
+encoder: resnet34
+encoder_weights: imagenet
+dropout: 0.1
+
+# ---------------------------------------------------------------------------
+# Training
+# ---------------------------------------------------------------------------
+batch: 16
+epochs: 20
+lr: 0.001
+resize: [1088, 128]       # [W, H] for each crop
+pad: 15                   # padding around bbox before cropping
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+out_dir: ../71_misc/runs/segm_cb55
