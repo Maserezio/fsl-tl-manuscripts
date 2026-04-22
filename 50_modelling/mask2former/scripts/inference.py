@@ -1,4 +1,5 @@
 import argparse
+import json
 from pathlib import Path
 import sys
 
@@ -25,7 +26,10 @@ def build_argument_parser():
     parser = argparse.ArgumentParser(description="Run full-image text-line inference and export PAGE XML")
     parser.add_argument("--config-file", required=True)
     parser.add_argument("--weights", required=True)
-    parser.add_argument("--input", required=True)
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument("--input", help="Single image path or directory of images")
+    input_group.add_argument("--dataset-json", help="COCO JSON listing the split to export")
+    parser.add_argument("--dataset-images", help="Image root for --dataset-json entries")
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--save-masks", action="store_true")
     parser.add_argument("--device", choices=["cuda", "cpu"], default="cuda")
@@ -66,10 +70,47 @@ def draw_overlay(image_bgr, text_lines):
     return blended
 
 
+def collect_dataset_image_paths(dataset_json, dataset_images):
+    if not dataset_images:
+        raise ValueError("--dataset-images is required when --dataset-json is used.")
+
+    dataset_json = Path(dataset_json)
+    dataset_images = Path(dataset_images)
+    with open(dataset_json, encoding="utf-8") as handle:
+        coco = json.load(handle)
+
+    image_paths = []
+    missing_paths = []
+    for image in coco.get("images", []):
+        file_name = Path(image["file_name"])
+        image_path = file_name if file_name.is_absolute() else dataset_images / file_name
+        if image_path.exists():
+            image_paths.append(image_path)
+        else:
+            missing_paths.append(str(image_path))
+
+    if not image_paths:
+        raise FileNotFoundError(
+            f"No dataset images found for {dataset_json}. Checked under {dataset_images}."
+        )
+    if missing_paths:
+        raise FileNotFoundError(
+            "Some dataset images listed in the COCO JSON were not found. "
+            f"First missing path: {missing_paths[0]}"
+        )
+    return sorted(image_paths)
+
+
+def resolve_input_images(args):
+    if args.dataset_json:
+        return collect_dataset_image_paths(args.dataset_json, args.dataset_images)
+    return collect_image_paths(args.input)
+
+
 def main(args):
     cfg = load_cfg(args)
     predictor = FullImagePredictor(cfg)
-    image_paths = collect_image_paths(args.input)
+    image_paths = resolve_input_images(args)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 

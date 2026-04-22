@@ -78,10 +78,15 @@ class DinoMask2Former(nn.Module):
         targets = []
         for sample in batched_inputs:
             instances = sample["instances"].to(self.device)
-            gt_masks = instances.gt_masks.tensor if hasattr(instances.gt_masks, "tensor") else instances.gt_masks
+            image_height, image_width = instances.image_size
+            if instances.has("gt_masks"):
+                gt_masks = instances.gt_masks.tensor if hasattr(instances.gt_masks, "tensor") else instances.gt_masks
+                gt_masks = gt_masks.float()
+            else:
+                gt_masks = torch.zeros((0, image_height, image_width), dtype=torch.float32, device=self.device)
             targets.append({
                 "labels": instances.gt_classes,
-                "masks": gt_masks.float(),
+                "masks": gt_masks,
             })
         return targets
 
@@ -142,19 +147,20 @@ class DinoMask2Former(nn.Module):
         processed = Instances((output_height, output_width))
 
         if not instances.has("pred_masks"):
-            processed.scores = instances.scores
-            processed.pred_classes = instances.pred_classes
-            processed.pred_boxes = instances.pred_boxes
+            processed.scores = instances.scores.to("cpu")
+            processed.pred_classes = instances.pred_classes.to("cpu")
+            processed.pred_boxes = instances.pred_boxes.to("cpu")
             return processed
 
-        mask_tensor = instances.pred_masks.float().unsqueeze(1)
+        # Upsample masks on CPU to avoid large full-page allocations on the GPU.
+        mask_tensor = instances.pred_masks.to(device="cpu", dtype=torch.float32).unsqueeze(1)
         if mask_tensor.shape[-2:] != (output_height, output_width):
             mask_tensor = F.interpolate(mask_tensor, size=(output_height, output_width), mode="nearest")
 
         processed_masks = mask_tensor[:, 0] > 0.5
         processed.pred_masks = processed_masks
-        processed.scores = instances.scores
-        processed.pred_classes = instances.pred_classes
+        processed.scores = instances.scores.to("cpu")
+        processed.pred_classes = instances.pred_classes.to("cpu")
         processed.pred_boxes = BitMasks(processed_masks).get_bounding_boxes()
         return processed
 

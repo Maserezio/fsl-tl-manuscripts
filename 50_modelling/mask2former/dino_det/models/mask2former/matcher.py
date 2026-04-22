@@ -30,8 +30,9 @@ class HungarianMatcher(nn.Module):
 
     @torch.no_grad()
     def forward(self, outputs, targets):
-        pred_logits = outputs["pred_logits"]
-        pred_masks = outputs["pred_masks"]
+        # Compute matching in float32 to avoid AMP-induced inf/nan costs.
+        pred_logits = outputs["pred_logits"].float()
+        pred_masks = outputs["pred_masks"].float()
         indices = []
 
         for batch_index, target in enumerate(targets):
@@ -59,6 +60,7 @@ class HungarianMatcher(nn.Module):
                 + self.mask_weight * cost_mask
                 + self.dice_weight * cost_dice
             )
+            cost_matrix = torch.nan_to_num(cost_matrix, nan=1e6, posinf=1e6, neginf=-1e6)
             src_indices, tgt_indices = linear_sum_assignment(cost_matrix.cpu())
             indices.append(
                 (

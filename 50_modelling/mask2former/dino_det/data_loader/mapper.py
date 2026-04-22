@@ -22,11 +22,9 @@ class TextLineDatasetMapper:
         height, width = image_shape[:2]
         transforms = []
         short_edge = min(height, width)
-        scale = 1.0
-        if short_edge < self.min_size:
-            scale = self.min_size / float(short_edge)
-            if max(height, width) * scale > self.max_size:
-                scale = self.max_size / float(max(height, width))
+        scale = self.min_size / float(short_edge)
+        if max(height, width) * scale > self.max_size:
+            scale = self.max_size / float(max(height, width))
 
         if scale != 1.0:
             new_height = int(round(height * scale))
