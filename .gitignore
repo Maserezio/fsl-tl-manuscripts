@@ -11,4 +11,4 @@
 80_models/
 99_evaluation/
 runs/
-detectron2/
+50_modelling/Mask2Former/ 
