@@ -11,4 +11,5 @@
 80_models/
 99_evaluation/
 runs/
-50_modelling/Mask2Former/ 
+50_modelling/Mask2Former/
+*pt
