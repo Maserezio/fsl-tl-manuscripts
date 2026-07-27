@@ -15,8 +15,21 @@ An escape hatch remains for stock checkpoints / RT-DETR via --model (e.g. a yolo
 baseline). Exactly one of --encoder / --model must be given.
 """
 import argparse
+import sys
 import tempfile
 from pathlib import Path
+
+# `hier_encoder` is the shared SFP package under 71_misc/. Put 71_misc on sys.path so
+# this module imports from any cwd / Jupyter kernel / Colab even without the editable
+# install active in that interpreter.
+_HIER_PARENT = Path(__file__).resolve().parents[2] / "71_misc"
+if str(_HIER_PARENT) not in sys.path:
+    sys.path.insert(0, str(_HIER_PARENT))
+# This module's own directory too, so `import timm_backbone` / `hier_encoder_yolo` work
+# when imported (not just when run as a script from here).
+_HERE = Path(__file__).resolve().parent
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
 
 import yaml
 from ultralytics import YOLO, RTDETR

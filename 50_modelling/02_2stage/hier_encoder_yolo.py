@@ -14,7 +14,15 @@ Usage:
     model = build_trainable_yolo(cfg, nc=1, scale='s')
     model.train(data=..., epochs=...)
 """
+import sys
 import tempfile
+from pathlib import Path
+
+# hier_encoder lives in the shared 71_misc/ package dir; ensure it's importable even when
+# this module is used standalone (not only via train_detector, which also adds the path).
+_HIER_PARENT = Path(__file__).resolve().parents[2] / "71_misc"
+if str(_HIER_PARENT) not in sys.path:
+    sys.path.insert(0, str(_HIER_PARENT))
 
 import torch.nn.functional as F
 from hier_encoder.adapters.yolo_adapter import (

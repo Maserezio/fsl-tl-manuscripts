@@ -2,14 +2,7 @@
 .claude/
 .github/
 .vscode/
-*.jpeg
-*.jpg
-*.xml
 *.pyc
 00_data/
-71_misc/
 80_models/
 99_evaluation/
-runs/
-50_modelling/Mask2Former/
-*pt

@@ -17,6 +17,15 @@ training silently on random weights.
 """
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# hier_encoder is the shared SFP package under 71_misc/; ensure it's importable from any
+# cwd / Jupyter kernel / Colab even without the editable install active.
+_HIER_PARENT = Path(__file__).resolve().parents[3] / "71_misc"
+if str(_HIER_PARENT) not in sys.path:
+    sys.path.insert(0, str(_HIER_PARENT))
+
 HIER_VIT_BACKBONES = {
     "vit_small_patch16_224.augreg_in21k": "vit_small_patch16_224.augreg_in21k",
     "vit_small_patch16_dinov3": "dinov3_vits16",

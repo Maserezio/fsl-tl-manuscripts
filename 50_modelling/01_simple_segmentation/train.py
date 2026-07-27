@@ -256,7 +256,7 @@ def main(cfg_path: str, overrides: dict | None = None, run_name_override: str | 
     split_dirs = _resolve_layout(data_root, manuscript, dataset_family)
     base_img_train = split_dirs["train"]["img"]
     repo_root = Path(__file__).resolve().parents[2]
-    precomp_dir = os.path.join(str(repo_root), "10_img_preprocessing")
+    precomp_dir = os.path.join(str(repo_root), "71_misc")
     precomp = None
     if dataset_family == "diva":
         candidate = os.path.join(
