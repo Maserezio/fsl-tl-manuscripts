@@ -1,0 +1,55 @@
+name: diva_cs18
+dataset_family: diva
+
+detection:
+  data: ../configs/data/diva_cs18_detect.yaml
+  epochs: 300
+  batch: 8
+  imgsz: 1280
+  lr0: 0.001
+  patience: 50
+  out_dir: ../../../80_models/02_2stage/diva-hisdb/detection/diva_cs18
+  variants:
+    base: ../../../80_models/02_2stage/pretrained/yolov8n.pt
+  selected_variant: base
+
+segmentation:
+  dataset_type: pagexml
+  train_img_dir: ../../../00_data/DIVA-HisDB/CS18/img-CS18/img/training
+  train_xml_dir: ../../../00_data/DIVA-HisDB/CS18/PAGE-gt-CS18/PAGE-gt/training
+  val_img_dir: ../../../00_data/DIVA-HisDB/CS18/img-CS18/img/validation
+  val_xml_dir: ../../../00_data/DIVA-HisDB/CS18/PAGE-gt-CS18/PAGE-gt/validation
+  test_img_dir: ../../../00_data/DIVA-HisDB/CS18/img-CS18/img/public-test
+  test_xml_dir: ../../../00_data/DIVA-HisDB/CS18/PAGE-gt-CS18/PAGE-gt/public-test
+  architecture: unet
+  encoder: resnet34
+  encoder_weights: imagenet
+  batch: 16
+  epochs: 30
+  lr: 0.001
+  resize: [1088, 128]
+  pad: 15
+  out_dir: ../../../80_models/02_2stage/diva-hisdb/segmentation/diva_cs18
+
+prediction:
+  yolo_variant: base
+  test_img_dir: ../../../00_data/DIVA-HisDB/CS18/img-CS18/img/public-test
+  test_xml_dir: ../../../00_data/DIVA-HisDB/CS18/PAGE-gt-CS18-TASK-2/TASK-2/public-test
+  out_xml_dir: ../../../99_evaluation/02_2stage/diva-hisdb/diva_cs18/pagexml
+  conf: 0.25
+  bin_thresh: 0.1
+  resize_w: 1088
+  resize_h: 128
+  crop_pad: 15
+
+evaluation:
+  hscp:
+    pred_xml_dir: ../../../99_evaluation/02_2stage/diva-hisdb/diva_cs18/pagexml
+    gt_xml_dir: ../../../00_data/DIVA-HisDB/CS18/PAGE-gt-CS18-TASK-2/TASK-2/public-test
+    test_img_dir: ../../../00_data/DIVA-HisDB/CS18/img-CS18/img/public-test
+    iou_thresh: 0.75
+  diva:
+    pred_xml_dir: ../../../99_evaluation/02_2stage/diva-hisdb/diva_cs18/pagexml
+    gt_pixel_dir: ../../../00_data/DIVA-HisDB/CS18/pixel-level-gt-CS18/pixel-level-gt/public-test
+    gt_page_dir: ../../../00_data/DIVA-HisDB/CS18/PAGE-gt-CS18-TASK-2/TASK-2/public-test
+    img_dir: ../../../00_data/DIVA-HisDB/CS18/img-CS18/img/public-test

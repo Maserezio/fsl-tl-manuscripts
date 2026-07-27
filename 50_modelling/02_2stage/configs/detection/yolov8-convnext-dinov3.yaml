@@ -1,0 +1,36 @@
+# YOLOv8 detection with ConvNeXt-Tiny DINOv3-distilled (timm, dinov3_lvd1689m pretrain).
+# Channels at strides 8/16/32: [192, 384, 768]
+nc: 1
+scales:
+  n: [0.33, 0.25, 1024]
+  s: [0.33, 0.50, 1024]
+  m: [0.67, 0.75, 768]
+  l: [1.00, 1.00, 512]
+  x: [1.00, 1.25, 512]
+
+backbone:
+  - [-1, 1, TimmBackbone, [convnext_dinov3, 1024, false]]  # 0  returns [P3/8, P4/16, P5/32]
+  - [0, 1, Index, [192, 0]]   # 1  P3/8
+  - [0, 1, Index, [384, 1]]   # 2  P4/16
+  - [0, 1, Index, [768, 2]]   # 3  P5/32
+
+head:
+  - [-1, 1, Conv, [768, 1, 1]]           # 4   (input = P5)
+  - [-1, 1, nn.Upsample, [None, 2, nearest]]  # 5
+  - [[-1, 2], 1, Concat, [1]]            # 6   cat P4
+  - [-1, 3, C2f, [768]]                  # 7
+
+  - [-1, 1, Conv, [384, 1, 1]]           # 8
+  - [-1, 1, nn.Upsample, [None, 2, nearest]]  # 9
+  - [[-1, 1], 1, Concat, [1]]            # 10  cat P3
+  - [-1, 3, C2f, [384]]                  # 11  (P3/8 out)
+
+  - [-1, 1, Conv, [384, 3, 2]]           # 12
+  - [[-1, 8], 1, Concat, [1]]            # 13  cat head P4
+  - [-1, 3, C2f, [768]]                  # 14  (P4/16 out)
+
+  - [-1, 1, Conv, [768, 3, 2]]           # 15
+  - [[-1, 4], 1, Concat, [1]]            # 16  cat head P5
+  - [-1, 3, C2f, [1536]]                 # 17  (P5/32 out)
+
+  - [[11, 14, 17], 1, Detect, [nc]]      # Detect(P3, P4, P5)

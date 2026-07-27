@@ -1,0 +1,36 @@
+# Plain U-Net (smp, resnet34 encoder) on DIVA-HisDB main-text-body.
+# Trains on the pixel-level GT (blue==8). No baselines / no ARU-Net for DIVA;
+# text-line instances are recovered downstream via seam carving.
+
+model:
+  type: smp_unet
+  encoder_name: resnet34
+  encoder_weights: imagenet
+
+supervoxel:
+  enabled: false
+  n_segments: 200
+  compactness: 10
+  sigma: 1
+  lambda_sv: 0.1
+  lambda_sv_u: 0.05
+  lambda_boundary: 0.0
+
+training:
+  crop_size: 448
+  batch_size: 4
+  epochs: 200
+  early_stopping_patience: 30
+  lr: 0.001
+  lr_backbone: 0.0001
+  weight_decay: 0.0001
+  amp: true
+  vis_every: 5
+
+data:
+  data_root: ../00_data/DIVA-HisDB
+  dataset_family: diva
+  manuscript: CS863
+  k_shot: 20
+  selection_method: grayscale_variance
+  num_workers: 4

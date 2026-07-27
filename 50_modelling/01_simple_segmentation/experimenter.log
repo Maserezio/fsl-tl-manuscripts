@@ -1,0 +1,149 @@
+2026-07-25 22:26:20.182 CEST [main]  TRACE LineSegmentationEvaluatorTool:42 - main
+2026-07-25 22:26:20.195 CEST [main]  INFO  LineSegmentationEvaluatorTool:130 - Loading image ground truth from /home/artur/Thesis/fsl-tl-manuscripts/00_data/DIVA-HisDB/CB55/pixel-level-gt-CB55/pixel-level-gt/public-test/e-codices_fmb-cb-0055_0162v_max.png
+2026-07-25 22:26:20.395 CEST [main]  INFO  LineSegmentationEvaluatorTool:138 - Loading page ground truth from /home/artur/Thesis/fsl-tl-manuscripts/00_data/DIVA-HisDB/CB55/PAGE-gt-CB55-TASK-2/TASK-2/public-test/e-codices_fmb-cb-0055_0162v_max.xml
+2026-07-25 22:26:20.395 CEST [main]  TRACE ImageLinePageDataset:51 - readDataFromFile
+2026-07-25 22:26:20.411 CEST [main]  TRACE ImageLinePageDataset:82 - getPolygonFromXml
+2026-07-25 22:26:20.415 CEST [main]  DEBUG ImageLinePageDataset:129 - found 7 polygons in XML document
+2026-07-25 22:26:20.416 CEST [main]  TRACE ImageLinePageDataset:67 - java.util.ArrayList@67205a84
+2026-07-25 22:26:20.416 CEST [main]  INFO  LineSegmentationEvaluatorTool:143 - Loading method output from /tmp/verify_diva_poly_ckpt/pred_xml/e-codices_fmb-cb-0055_0162v_max.xml
+2026-07-25 22:26:20.416 CEST [main]  TRACE ImageLinePageDataset:51 - readDataFromFile
+2026-07-25 22:26:20.418 CEST [main]  TRACE ImageLinePageDataset:82 - getPolygonFromXml
+2026-07-25 22:26:20.418 CEST [main]  DEBUG ImageLinePageDataset:129 - found 7 polygons in XML document
+2026-07-25 22:26:20.418 CEST [main]  TRACE ImageLinePageDataset:67 - java.util.ArrayList@7d0587f1
+2026-07-25 22:26:20.418 CEST [main]  INFO  LineSegmentationEvaluatorTool:148 - Evaluating...
+2026-07-25 22:26:20.419 CEST [main]  TRACE LineSegmentationEvaluator:50 - evaluate
+2026-07-25 22:26:20.419 CEST [main]  TRACE LineSegmentationEvaluator:316 - getMatchingPolygons
+2026-07-25 22:26:20.420 CEST [main]  TRACE LineSegmentationEvaluator:339 - matching possibility for GT: java.awt.Polygon@1e6d1014
+2026-07-25 22:26:20.420 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@1e6d1014 with MO: java.awt.Polygon@76707e36
+2026-07-25 22:26:20.420 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@1e6d1014 with MO: java.awt.Polygon@614ddd49
+2026-07-25 22:26:20.420 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@1e6d1014 with MO: java.awt.Polygon@1f554b06
+2026-07-25 22:26:20.420 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@1e6d1014 with MO: java.awt.Polygon@694e1548
+2026-07-25 22:26:20.420 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@1e6d1014 with MO: java.awt.Polygon@1c3a4799
+2026-07-25 22:26:20.550 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@1e6d1014 * java.awt.Polygon@711f39f9 = 0.9874114177560632
+2026-07-25 22:26:20.550 CEST [main]  TRACE LineSegmentationEvaluator:339 - matching possibility for GT: java.awt.Polygon@71bbf57e
+2026-07-25 22:26:20.550 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@71bbf57e with MO: java.awt.Polygon@76707e36
+2026-07-25 22:26:20.550 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@71bbf57e with MO: java.awt.Polygon@614ddd49
+2026-07-25 22:26:20.550 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@71bbf57e with MO: java.awt.Polygon@1f554b06
+2026-07-25 22:26:20.551 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@71bbf57e with MO: java.awt.Polygon@694e1548
+2026-07-25 22:26:20.592 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@71bbf57e * java.awt.Polygon@1c3a4799 = 1.677746786066313E-4
+2026-07-25 22:26:20.631 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@71bbf57e * java.awt.Polygon@7f13d6e = 0.9732357177148344
+2026-07-25 22:26:20.685 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@71bbf57e * java.awt.Polygon@711f39f9 = 0.005307582995188933
+2026-07-25 22:26:20.686 CEST [main]  TRACE LineSegmentationEvaluator:339 - matching possibility for GT: java.awt.Polygon@51cdd8a
+2026-07-25 22:26:20.686 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@51cdd8a with MO: java.awt.Polygon@76707e36
+2026-07-25 22:26:20.686 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@51cdd8a with MO: java.awt.Polygon@614ddd49
+2026-07-25 22:26:20.686 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@51cdd8a with MO: java.awt.Polygon@1f554b06
+2026-07-25 22:26:20.761 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@51cdd8a * java.awt.Polygon@1c3a4799 = 0.940166240138745
+2026-07-25 22:26:20.798 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@51cdd8a * java.awt.Polygon@7f13d6e = 0.005046550994498519
+2026-07-25 22:26:20.799 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@51cdd8a with MO: java.awt.Polygon@711f39f9
+2026-07-25 22:26:20.799 CEST [main]  TRACE LineSegmentationEvaluator:339 - matching possibility for GT: java.awt.Polygon@2d6eabae
+2026-07-25 22:26:20.799 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@2d6eabae with MO: java.awt.Polygon@76707e36
+2026-07-25 22:26:20.799 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@2d6eabae with MO: java.awt.Polygon@614ddd49
+2026-07-25 22:26:20.909 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@2d6eabae * java.awt.Polygon@694e1548 = 0.879925390533924
+2026-07-25 22:26:20.962 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@2d6eabae * java.awt.Polygon@1c3a4799 = 0.01387682627911914
+2026-07-25 22:26:20.962 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@2d6eabae with MO: java.awt.Polygon@7f13d6e
+2026-07-25 22:26:20.962 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@2d6eabae with MO: java.awt.Polygon@711f39f9
+2026-07-25 22:26:20.962 CEST [main]  TRACE LineSegmentationEvaluator:339 - matching possibility for GT: java.awt.Polygon@4e7dc304
+2026-07-25 22:26:20.962 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@4e7dc304 with MO: java.awt.Polygon@76707e36
+2026-07-25 22:26:21.014 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@4e7dc304 * java.awt.Polygon@614ddd49 = 0.002624357722978324
+2026-07-25 22:26:21.055 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@4e7dc304 * java.awt.Polygon@1f554b06 = 0.9501898968171277
+2026-07-25 22:26:21.099 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@4e7dc304 * java.awt.Polygon@694e1548 = 0.0076361281502401466
+2026-07-25 22:26:21.100 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@4e7dc304 with MO: java.awt.Polygon@1c3a4799
+2026-07-25 22:26:21.100 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@4e7dc304 with MO: java.awt.Polygon@7f13d6e
+2026-07-25 22:26:21.100 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@4e7dc304 with MO: java.awt.Polygon@711f39f9
+2026-07-25 22:26:21.100 CEST [main]  TRACE LineSegmentationEvaluator:339 - matching possibility for GT: java.awt.Polygon@64729b1e
+2026-07-25 22:26:21.138 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@64729b1e * java.awt.Polygon@76707e36 = 0.0017762675213345174
+2026-07-25 22:26:21.168 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@64729b1e * java.awt.Polygon@614ddd49 = 0.944697228225837
+2026-07-25 22:26:21.204 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@64729b1e * java.awt.Polygon@1f554b06 = 0.010748528639717057
+2026-07-25 22:26:21.204 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@64729b1e with MO: java.awt.Polygon@694e1548
+2026-07-25 22:26:21.204 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@64729b1e with MO: java.awt.Polygon@1c3a4799
+2026-07-25 22:26:21.204 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@64729b1e with MO: java.awt.Polygon@7f13d6e
+2026-07-25 22:26:21.204 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@64729b1e with MO: java.awt.Polygon@711f39f9
+2026-07-25 22:26:21.205 CEST [main]  TRACE LineSegmentationEvaluator:339 - matching possibility for GT: java.awt.Polygon@10bbd20a
+2026-07-25 22:26:21.239 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@10bbd20a * java.awt.Polygon@76707e36 = 0.976214824073022
+2026-07-25 22:26:21.276 CEST [main]  TRACE LineSegmentationEvaluator:391 - matching possibility: java.awt.Polygon@10bbd20a * java.awt.Polygon@614ddd49 = 0.004117349322535431
+2026-07-25 22:26:21.276 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@10bbd20a with MO: java.awt.Polygon@1f554b06
+2026-07-25 22:26:21.276 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@10bbd20a with MO: java.awt.Polygon@694e1548
+2026-07-25 22:26:21.276 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@10bbd20a with MO: java.awt.Polygon@1c3a4799
+2026-07-25 22:26:21.276 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@10bbd20a with MO: java.awt.Polygon@7f13d6e
+2026-07-25 22:26:21.276 CEST [main]  TRACE LineSegmentationEvaluator:349 - no matching possibility of java.awt.Polygon@10bbd20a with MO: java.awt.Polygon@711f39f9
+2026-07-25 22:26:21.276 CEST [main]  DEBUG LineSegmentationEvaluator:395 - 16 possibilities
+2026-07-25 22:26:21.277 CEST [main]  DEBUG LineSegmentationEvaluator:408 - match 0.9874114177560632
+2026-07-25 22:26:21.277 CEST [main]  DEBUG LineSegmentationEvaluator:408 - match 0.976214824073022
+2026-07-25 22:26:21.277 CEST [main]  DEBUG LineSegmentationEvaluator:408 - match 0.9732357177148344
+2026-07-25 22:26:21.277 CEST [main]  DEBUG LineSegmentationEvaluator:408 - match 0.9501898968171277
+2026-07-25 22:26:21.278 CEST [main]  DEBUG LineSegmentationEvaluator:408 - match 0.944697228225837
+2026-07-25 22:26:21.278 CEST [main]  DEBUG LineSegmentationEvaluator:408 - match 0.940166240138745
+2026-07-25 22:26:21.278 CEST [main]  DEBUG LineSegmentationEvaluator:408 - match 0.879925390533924
+2026-07-25 22:26:21.278 CEST [main]  INFO  LineSegmentationEvaluator:415 - found 7 matches
+2026-07-25 22:26:21.278 CEST [main]  TRACE LineSegmentationEvaluator:439 - java.util.ArrayList@396f6598
+2026-07-25 22:26:21.281 CEST [main]  TRACE LineSegmentationEvaluator:82 - evaluation matching java.awt.Polygon@1e6d1014 * java.awt.Polygon@711f39f9
+2026-07-25 22:26:21.337 CEST [main]  TRACE LineSegmentationEvaluator:186 - P = 0.9908714792620622
+2026-07-25 22:26:21.338 CEST [main]  TRACE LineSegmentationEvaluator:187 - R = 0.9964760057449991
+2026-07-25 22:26:21.338 CEST [main]  TRACE LineSegmentationEvaluator:208 - line considered as correctly detected
+2026-07-25 22:26:21.354 CEST [main]  TRACE LineSegmentationEvaluator:82 - evaluation matching java.awt.Polygon@10bbd20a * java.awt.Polygon@76707e36
+2026-07-25 22:26:21.407 CEST [main]  TRACE LineSegmentationEvaluator:186 - P = 0.9964433448022577
+2026-07-25 22:26:21.407 CEST [main]  TRACE LineSegmentationEvaluator:187 - R = 0.9796282923492076
+2026-07-25 22:26:21.407 CEST [main]  TRACE LineSegmentationEvaluator:208 - line considered as correctly detected
+2026-07-25 22:26:21.407 CEST [main]  TRACE LineSegmentationEvaluator:82 - evaluation matching java.awt.Polygon@71bbf57e * java.awt.Polygon@7f13d6e
+2026-07-25 22:26:21.447 CEST [main]  TRACE LineSegmentationEvaluator:186 - P = 0.9902912621359223
+2026-07-25 22:26:21.447 CEST [main]  TRACE LineSegmentationEvaluator:187 - R = 0.9826113299000303
+2026-07-25 22:26:21.447 CEST [main]  TRACE LineSegmentationEvaluator:208 - line considered as correctly detected
+2026-07-25 22:26:21.447 CEST [main]  TRACE LineSegmentationEvaluator:82 - evaluation matching java.awt.Polygon@4e7dc304 * java.awt.Polygon@1f554b06
+2026-07-25 22:26:21.500 CEST [main]  TRACE LineSegmentationEvaluator:186 - P = 0.9798967106859381
+2026-07-25 22:26:21.500 CEST [main]  TRACE LineSegmentationEvaluator:187 - R = 0.9690809995543824
+2026-07-25 22:26:21.500 CEST [main]  TRACE LineSegmentationEvaluator:208 - line considered as correctly detected
+2026-07-25 22:26:21.501 CEST [main]  TRACE LineSegmentationEvaluator:82 - evaluation matching java.awt.Polygon@64729b1e * java.awt.Polygon@614ddd49
+2026-07-25 22:26:21.545 CEST [main]  TRACE LineSegmentationEvaluator:186 - P = 0.9859904624334646
+2026-07-25 22:26:21.545 CEST [main]  TRACE LineSegmentationEvaluator:187 - R = 0.9575502517391137
+2026-07-25 22:26:21.545 CEST [main]  TRACE LineSegmentationEvaluator:208 - line considered as correctly detected
+2026-07-25 22:26:21.545 CEST [main]  TRACE LineSegmentationEvaluator:82 - evaluation matching java.awt.Polygon@51cdd8a * java.awt.Polygon@1c3a4799
+2026-07-25 22:26:21.580 CEST [main]  TRACE LineSegmentationEvaluator:186 - P = 0.9691499335033902
+2026-07-25 22:26:21.580 CEST [main]  TRACE LineSegmentationEvaluator:187 - R = 0.9691710635329002
+2026-07-25 22:26:21.580 CEST [main]  TRACE LineSegmentationEvaluator:208 - line considered as correctly detected
+2026-07-25 22:26:21.580 CEST [main]  TRACE LineSegmentationEvaluator:82 - evaluation matching java.awt.Polygon@2d6eabae * java.awt.Polygon@694e1548
+2026-07-25 22:26:21.639 CEST [main]  TRACE LineSegmentationEvaluator:186 - P = 0.9841855266834312
+2026-07-25 22:26:21.639 CEST [main]  TRACE LineSegmentationEvaluator:187 - R = 0.8925452303326182
+2026-07-25 22:26:21.639 CEST [main]  TRACE LineSegmentationEvaluator:208 - line considered as correctly detected
+2026-07-25 22:26:21.639 CEST [main]  TRACE Results:68 - put(LineSegmentation.NbLinesTruth.int) = 7
+2026-07-25 22:26:21.639 CEST [main]  TRACE Results:68 - put(LineSegmentation.NbLinesProposed.int) = 7
+2026-07-25 22:26:21.639 CEST [main]  TRACE Results:68 - put(LineSegmentation.NbLinesCorrect.int) = 7
+2026-07-25 22:26:21.639 CEST [main]  TRACE Results:68 - put(LineSegmentation.LinesIU.double) = 1.0
+2026-07-25 22:26:21.639 CEST [main]  TRACE Results:68 - put(LineSegmentation.LinesFMeasure.double) = 1.0
+2026-07-25 22:26:21.639 CEST [main]  TRACE Results:68 - put(LineSegmentation.LinesRecall.Double) = 1.0
+2026-07-25 22:26:21.640 CEST [main]  TRACE Results:68 - put(LineSegmentation.LinesPrecision.Double) = 1.0
+2026-07-25 22:26:21.640 CEST [main]  TRACE Results:68 - put(LineSegmentation.MatchedPixelIU.double) = 0.9503961242811125
+2026-07-25 22:26:21.640 CEST [main]  TRACE Results:68 - put(LineSegmentation.MatchedPixelFMeasure.Double) = 0.9745672814351132
+2026-07-25 22:26:21.640 CEST [main]  TRACE Results:68 - put(LineSegmentation.MatchedPixelPrecision.Double) = 0.9856257053707761
+2026-07-25 22:26:21.640 CEST [main]  TRACE Results:68 - put(LineSegmentation.MatchedPixelRecall.Double) = 0.9637542486647054
+2026-07-25 22:26:21.640 CEST [main]  TRACE Results:68 - put(LineSegmentation.PixelIU.double) = 0.9503961242811125
+2026-07-25 22:26:21.640 CEST [main]  TRACE Results:68 - put(LineSegmentation.PixelFMeasure.Double) = 0.9745672814351132
+2026-07-25 22:26:21.640 CEST [main]  TRACE Results:68 - put(LineSegmentation.PixelPrecision.Double) = 0.9856257053707761
+2026-07-25 22:26:21.640 CEST [main]  TRACE Results:68 - put(LineSegmentation.PixelRecall.Double) = 0.9637542486647054
+2026-07-25 22:26:21.640 CEST [main]  TRACE LineSegmentationEvaluator:275 - ch.unifr.Results@12c8a2c0
+2026-07-25 22:26:21.640 CEST [main]  DEBUG LineSegmentationEvaluator:278 - TP = 371162
+2026-07-25 22:26:21.640 CEST [main]  DEBUG LineSegmentationEvaluator:279 - FP = 5413
+2026-07-25 22:26:21.640 CEST [main]  DEBUG LineSegmentationEvaluator:280 - FN = 13959
+2026-07-25 22:26:21.641 CEST [main]  DEBUG LineSegmentationEvaluator:281 - GT size = 7
+2026-07-25 22:26:21.641 CEST [main]  DEBUG LineSegmentationEvaluator:283 - Prediction size = 7
+2026-07-25 22:26:21.641 CEST [main]  DEBUG LineSegmentationEvaluator:284 - nbPixelsPrediction = 376575
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:285 - nbPixelsGt = 385121
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:286 - nbLinesCorrect = 7
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:287 - nbLinesExtra = 0
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:288 - nbLinesMissed = 0
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:290 - line IU = 1.0
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:291 - line F1 = 1.0
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:292 - linePrecision = 1.0
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:293 - lineRecall = 1.0
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:295 - matchedPixel IU = 0.9503961242811125
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:296 - matchedPixel F1 = 0.9745672814351132
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:297 - matchedPixelPrecision = 0.9856257053707761
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:298 - matchedPixelRecall = 0.9637542486647054
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:300 - pixel IU = 0.9503961242811125
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:301 - pixel F1 = 0.9745672814351132
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:302 - pixelPrecision = 0.9856257053707761
+2026-07-25 22:26:21.642 CEST [main]  DEBUG LineSegmentationEvaluator:303 - pixelRecall = 0.9637542486647054
+2026-07-25 22:26:21.642 CEST [main]  TRACE Results:68 - put(LineSegmentation.filename.String) = e-codices_fmb-cb-0055_0162v_max
+2026-07-25 22:26:21.642 CEST [main]  INFO  LineSegmentationEvaluatorTool:157 - Writing results in /tmp/verify_diva_poly_ckpt/pred_xml/e-codices_fmb-cb-0055_0162v_max
+2026-07-25 22:26:21.646 CEST [main]  DEBUG Results:136 - Appended results on/tmp/verify_diva_poly_ckpt/pred_xml/results.csv
+2026-07-25 22:26:22.154 CEST [main]  INFO  LineSegmentationEvaluatorTool:165 - Writing visualization image in /tmp/verify_diva_poly_ckpt/pred_xml/e-codices_fmb-cb-0055_0162v_max
+2026-07-25 22:26:24.394 CEST [main]  INFO  LineSegmentationEvaluatorTool:174 - Writing overlap image in /tmp/verify_diva_poly_ckpt/pred_xml/e-codices_fmb-cb-0055_0162v_max
