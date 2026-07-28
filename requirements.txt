@@ -1,0 +1,46 @@
+# Dependencies for fsl-tl-manuscripts.
+#
+# Derived by AST-scanning every .py and .ipynb in 50_modelling/ and 71_misc/ for actual
+# imports -- not from the 308-package dev venv, most of which is unused (detectron2,
+# mmdet, rfdetr, clearml, mlflow, wandb, optuna, lightly_train, dh_segment, ...).
+#
+# Not installable via pip: the DIVA/HisDB layout evaluators shell out to a JRE
+# (50_modelling/*/evaluate.py), so `apt install default-jre` on a fresh machine.
+#
+# Lines tagged `# [colab-skip]` are dropped by the Colab notebook's install cell: the
+# runtime already ships them built against its own CUDA, and reinstalling costs several
+# GB and often breaks the driver match. TensorFlow is skipped there for a different
+# reason -- it is only used by the local ARU-Net eval path.
+
+# --- core DL ---
+torch==2.9.1                            # [colab-skip]
+torchvision==0.24.1                     # [colab-skip]
+timm==1.0.24
+transformers==5.14.1
+segmentation_models_pytorch==0.5.0
+ultralytics==8.4.14
+einops==0.8.1
+
+# Needed by the torch.hub loaders for the RADIO / DINOv3 SFP backbones
+# (71_misc/hier_encoder/backbones.py). Unused by the CNN backbones.
+open_clip_torch==3.3.0
+
+# --- imaging / numerics ---
+numpy==2.2.6                            # [colab-skip]
+opencv-python-headless==4.10.0.84
+pillow==12.1.0                          # [colab-skip]
+scipy==1.17.0                           # [colab-skip]
+scikit-image==0.26.0
+scikit-learn==1.8.0                     # [colab-skip]
+shapely==2.1.2
+
+# --- io / utils ---
+PyYAML==6.0.3
+tqdm==4.67.1
+pandas==2.3.3                           # [colab-skip]
+matplotlib==3.10.8                      # [colab-skip]
+
+# --- ARU-Net baseline only ---
+# 50_modelling/01_simple_segmentation/models/arunet.py loads a frozen .pb graph.
+# ~600 MB; drop it if you never run the ARU-Net fusion path in evaluate_lines.py.
+tensorflow==2.21.0                      # [colab-skip]
