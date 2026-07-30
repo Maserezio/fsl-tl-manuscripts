@@ -3,6 +3,7 @@
 .github/
 .vscode/
 *.pyc
+*.log
 00_data/
 80_models/
 99_evaluation/
