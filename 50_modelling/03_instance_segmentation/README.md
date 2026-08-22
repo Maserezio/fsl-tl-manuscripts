@@ -23,20 +23,21 @@ python3 -m venv --system-site-packages ~/.venvs/fsl-mask2former
 and Transformers installation. A clean environment can instead install the
 root `requirements.txt` first.
 
-## Colab full-page 1152 run
+## Colab tiled 1152 run
 
 Open
 [`colab_03_mask2former_udiads.ipynb`](colab_03_mask2former_udiads.ipynb) in a
-GPU Colab runtime. It mirrors the repository's other Colab experiments with a
-1152 px maximum image side, 100 epochs, batch 1, gradient accumulation 2, seed
-42, Drive checkpoint sync, and a real forward/backward VRAM guard. Mask2Former
-keeps the page aspect ratio, so U-DIADS full pages become `768 x 1152` rather
-than being distorted to a square.
+GPU Colab runtime. It keeps a 1152 px maximum image side, batch 1, seed 42,
+Drive checkpoint sync, and a real forward/backward VRAM guard. Latin14396 uses
+full pages; Latin2 and Syr341 use two and three vertical tiles. All stages use
+100 queries and full-resolution instance targets.
 
-The notebook trains full pages without column tiling, retains full-resolution
-instance targets, grows the transfer chain from 100 to 160 to 200 queries, and
-selects score/mask/NMS thresholds strictly on validation before one tuned test
-evaluation. It supports BF16 Colab GPUs and T4 FP16 through GradScaler.
+The dense stages both initialize directly from the Latin14396 checkpoint and
+use gradient accumulation 1. Their epoch counts are calculated for about 1000
+optimizer updates (167 epochs for Latin2 and 112 for Syr341 with the current
+three training pages). Checkpoints maximize validation FM every ten epochs;
+score/mask/NMS thresholds are then selected on validation before one test run.
+The notebook supports BF16 Colab GPUs and T4 FP16 through GradScaler.
 
 ## Commands
 

@@ -415,12 +415,15 @@ def train_subset(args: argparse.Namespace, subset: str, run_name: str) -> Path:
     output_dir = args.model_root / subset / run_name
     output_dir.mkdir(parents=True, exist_ok=True)
     history_path = output_dir / "history.csv"
-    best_loss = math.inf
+    best_value = math.inf if args.checkpoint_metric == "val_loss" else -math.inf
     update_step = 0
     started = time.monotonic()
 
     with history_path.open("w", newline="", encoding="utf-8") as history_file:
-        writer = csv.DictWriter(history_file, fieldnames=["epoch", "train_loss", "val_loss", "lr", "seconds"])
+        writer = csv.DictWriter(
+            history_file,
+            fieldnames=["epoch", "train_loss", "val_loss", "val_FM", "lr", "seconds"],
+        )
         writer.writeheader()
         model.train()
         optimizer.zero_grad(set_to_none=True)
@@ -428,10 +431,15 @@ def train_subset(args: argparse.Namespace, subset: str, run_name: str) -> Path:
             losses = []
             for batch_index, batch in enumerate(train_loader, start=1):
                 inputs = move_training_batch(batch, device, args.mask_label_bf16)
+                # Scale a final incomplete accumulation window by its actual
+                # size. With three pages and accumulation=2, the old fixed
+                # divisor halved the third page's gradient every epoch.
+                window_start = ((batch_index - 1) // args.gradient_accumulation) * args.gradient_accumulation
+                window_size = min(args.gradient_accumulation, len(train_loader) - window_start)
                 with autocast_context(device, args.amp):
-                    loss = model(**inputs).loss / args.gradient_accumulation
+                    loss = model(**inputs).loss / window_size
                 scaler.scale(loss).backward()
-                losses.append(float(loss.detach().cpu()) * args.gradient_accumulation)
+                losses.append(float(loss.detach().cpu()) * window_size)
                 del loss, inputs
 
                 if batch_index % args.gradient_accumulation == 0 or batch_index == len(train_loader):
@@ -449,11 +457,18 @@ def train_subset(args: argparse.Namespace, subset: str, run_name: str) -> Path:
                 if should_validate
                 else math.nan
             )
+            val_metrics = (
+                validation_instance_metrics(model, processor, args, subset, device)
+                if should_validate and args.checkpoint_metric == "val_fm"
+                else {}
+            )
+            val_fm = val_metrics.get("FM", math.nan)
             train_loss = float(np.mean(losses))
             row = {
                 "epoch": epoch,
                 "train_loss": train_loss,
                 "val_loss": val_loss,
+                "val_FM": val_fm,
                 "lr": optimizer.param_groups[0]["lr"],
                 "seconds": round(time.monotonic() - started, 1),
             }
@@ -461,11 +476,14 @@ def train_subset(args: argparse.Namespace, subset: str, run_name: str) -> Path:
             history_file.flush()
             print(
                 f"[{subset}] epoch {epoch:04d}/{args.epochs} "
-                f"train={train_loss:.4f} val={val_loss:.4f} updates={update_step}/{total_updates}"
+                f"train={train_loss:.4f} val={val_loss:.4f} val_FM={val_fm:.4f} "
+                f"updates={update_step}/{total_updates}"
             )
 
-            if should_validate and val_loss < best_loss:
-                best_loss = val_loss
+            candidate = val_loss if args.checkpoint_metric == "val_loss" else val_fm
+            improved = candidate < best_value if args.checkpoint_metric == "val_loss" else candidate > best_value
+            if should_validate and improved:
+                best_value = candidate
                 model.save_pretrained(output_dir)
                 processor.size = {"shortest_edge": args.shortest_edge, "longest_edge": args.longest_edge}
                 processor.save_pretrained(output_dir)
@@ -485,7 +503,13 @@ def train_subset(args: argparse.Namespace, subset: str, run_name: str) -> Path:
                             "mask_label_stride": args.mask_label_stride,
                             "mask_label_bf16": args.mask_label_bf16,
                             "train_vertical_tiles": args.train_vertical_tiles,
-                            "best_val_loss": best_loss,
+                            "checkpoint_metric": args.checkpoint_metric,
+                            "best_checkpoint_value": best_value,
+                            "best_val_loss": val_loss,
+                            "best_val_FM": val_fm,
+                            "checkpoint_score_threshold": args.checkpoint_score_threshold,
+                            "checkpoint_mask_threshold": args.checkpoint_mask_threshold,
+                            "checkpoint_nms_threshold": args.checkpoint_nms_threshold,
                             "seed": args.seed,
                         },
                         indent=2,
@@ -623,6 +647,77 @@ def post_process_text_line_instances(
         segmentation[None, None].float(), size=target_size, mode="nearest"
     )[0, 0].to(torch.uint16)
     return segmentation.cpu().numpy()
+
+
+def validation_instance_metrics(
+    model: Mask2FormerForUniversalSegmentation,
+    processor: Mask2FormerImageProcessor,
+    args: argparse.Namespace,
+    subset: str,
+    device: torch.device,
+) -> dict[str, float]:
+    """Evaluate the live model on full validation pages for checkpoint selection."""
+    val_pages = CocoTextLineDataset(
+        args.data_root,
+        subset,
+        "val",
+        processor=None,
+        max_images=args.max_eval_images,
+    )
+    rows = []
+    model.eval()
+    with torch.inference_mode():
+        for index in range(len(val_pages)):
+            image, _, metadata = val_pages.raw_item(index)
+            prediction = np.zeros((metadata["height"], metadata["width"]), dtype=np.uint16)
+            boundaries = np.linspace(
+                0, metadata["width"], args.train_vertical_tiles + 1, dtype=int
+            )
+            instance_offset = 0
+            for left, right in zip(boundaries[:-1], boundaries[1:]):
+                tile = image.crop((int(left), 0, int(right), metadata["height"]))
+                encoded = processor(
+                    images=tile,
+                    size={"shortest_edge": args.shortest_edge, "longest_edge": args.longest_edge},
+                    return_tensors="pt",
+                )
+                inputs = {
+                    key: value.to(device)
+                    for key, value in encoded.items()
+                    if torch.is_tensor(value)
+                }
+                with autocast_context(device, args.amp):
+                    outputs = model(**inputs)
+                tile_map = post_process_text_line_instances(
+                    outputs,
+                    processed_size=tuple(encoded["pixel_values"].shape[-2:]),
+                    target_size=(tile.height, tile.width),
+                    score_threshold=args.checkpoint_score_threshold,
+                    mask_threshold=args.checkpoint_mask_threshold,
+                    nms_threshold=args.checkpoint_nms_threshold,
+                )
+                foreground = tile_map > 0
+                tile_map[foreground] += instance_offset
+                prediction[:, int(left):int(right)] = tile_map
+                instance_offset = int(prediction.max())
+                del inputs, outputs
+
+            gt_path = resolve_split_dir(
+                args.data_root / subset / f"text-line-gt-{subset}", "val"
+            ) / f"{metadata['stem']}.png"
+            gt_binary = np.asarray(Image.open(gt_path).convert("L")) > 0
+            rows.append(zottin_metrics(gt_binary, prediction))
+
+    model.train()
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
+    metric_names = ("Pixel_IU", "Line_IU", "DR", "RA", "FM")
+    means = {name: float(np.mean([row[name] for row in rows])) for name in metric_names}
+    print(
+        f"[{subset}] checkpoint validation: FM={means['FM']:.4f} "
+        f"LineIU={means['Line_IU']:.4f} PixelIU={means['Pixel_IU']:.4f}"
+    )
+    return means
 
 
 def predict_subset(
@@ -809,6 +904,15 @@ def add_train_arguments(parser: argparse.ArgumentParser) -> None:
         help="Train and validate on this many non-overlapping vertical column tiles per page",
     )
     parser.add_argument("--eval-every", type=int, default=10)
+    parser.add_argument(
+        "--checkpoint-metric",
+        choices=("val_loss", "val_fm"),
+        default="val_loss",
+        help="Select the saved checkpoint by minimum validation loss or maximum instance FM",
+    )
+    parser.add_argument("--checkpoint-score-threshold", type=float, default=0.5)
+    parser.add_argument("--checkpoint-mask-threshold", type=float, default=0.5)
+    parser.add_argument("--checkpoint-nms-threshold", type=float, default=0.3)
     parser.add_argument("--workers", type=int, default=0)
     parser.add_argument("--max-train-images", type=int, default=None)
     parser.add_argument("--gradient-checkpointing", action=argparse.BooleanOptionalAction, default=False)
