@@ -1,5 +1,6 @@
 import argparse
 import os
+import random
 import sys
 import time
 from pathlib import Path
@@ -239,6 +240,17 @@ def main(cfg_path: str, overrides: dict | None = None, run_name_override: str | 
                 current = current[part]
             current[parts[-1]] = value
 
+    seed = cfg.get("training", {}).get("seed")
+    if seed is not None:
+        # Opt-in only: unset (the default, and what every earlier run used) leaves
+        # torch's global RNG untouched so existing recipes reproduce as before.
+        seed = int(seed)
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        print(f"Seed: {seed}")
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if device.type == "cuda":
         gpu_name = torch.cuda.get_device_name(0)
@@ -296,6 +308,7 @@ def main(cfg_path: str, overrides: dict | None = None, run_name_override: str | 
     total = sum(parameter.numel() for parameter in model.parameters())
     trainable = sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
     print(f"Parameters: {total / 1e6:.1f}M total, {trainable / 1e6:.1f}M trainable")
+    print(f"Model: {model.creator_name}  (skips kept: {getattr(model, 'n_skips', 'n/a')})")
 
     backbone_params = list(model.backbone.parameters())
     other_params = [parameter for parameter in model.parameters() if not any(parameter is bp for bp in backbone_params)]
@@ -400,12 +413,17 @@ if __name__ == "__main__":
                         help="segmentation architecture (overrides model.arch)")
     parser.add_argument("--encoder", type=str, default=None,
                         help="encoder/backbone name (overrides model.encoder_name)")
+    parser.add_argument("--n-skips", type=int, default=None, dest="n_skips", choices=[0, 1, 2, 3, 4],
+                        help="skip-connection ablation: keep only the N deepest U-Net skips and zero "
+                             "the higher-resolution ones (4 = untouched baseline). Param count unchanged.")
     parser.add_argument("--batch-size", type=int, default=None, dest="batch_size",
                         help="overrides training.batch_size (lower for big transformer backbones)")
     parser.add_argument("--epochs", type=int, default=None,
                         help="overrides training.epochs")
     parser.add_argument("--patience", type=int, default=None,
                         help="overrides training.early_stopping_patience (0 disables it)")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="seed python/numpy/torch RNGs (default: unseeded, as in all earlier runs)")
     parser.add_argument("--lr", type=float, default=None, help="overrides training.lr")
     parser.add_argument("--lr-backbone", type=float, default=None, dest="lr_backbone",
                         help="overrides training.lr_backbone")
@@ -435,10 +453,14 @@ if __name__ == "__main__":
         overrides["model.arch"] = args.arch
     if args.encoder is not None:
         overrides["model.encoder_name"] = args.encoder
+    if args.n_skips is not None:
+        overrides["model.n_skips"] = args.n_skips
     if args.batch_size is not None:
         overrides["training.batch_size"] = args.batch_size
     if args.epochs is not None:
         overrides["training.epochs"] = args.epochs
+    if args.seed is not None:
+        overrides["training.seed"] = args.seed
     if args.patience is not None:
         overrides["training.early_stopping_patience"] = args.patience
     if args.lr is not None:

@@ -131,7 +131,14 @@ def select_labeled_pages(
     precomputed_path  : if provided, parse this file instead of re-computing
     seed              : random seed used when method="random"
     """
-    if precomputed_path is not None and os.path.exists(precomputed_path):
+    if precomputed_path:
+        # Fail loudly. Silently recomputing when the file is missing swaps the
+        # selection method without saying so -- for grayscale_variance the fallback
+        # even produces plausible output, so a mistyped path would corrupt an
+        # experiment invisibly.
+        if not os.path.exists(precomputed_path):
+            raise FileNotFoundError(
+                f"precomputed selection file not found: {precomputed_path}")
         return parse_selection_file(precomputed_path, method=method, k=k)
 
     if method == "grayscale_variance":

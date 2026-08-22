@@ -1,0 +1,68 @@
+# RT-DETR (HuggingFace) backbone ablation on DIVA-HisDB CB55.
+#
+# Documented in this stage's experiment schema for consistency, but NOT driven by
+# pipeline.py: that pipeline runs the Ultralytics YOLO detector plus a crop segmenter,
+# while this detector trains through the HF Trainer. Entry points:
+#
+#   bash run_rtdetr_backbone_matrix.sh                          # trains all arms
+#   RUN_NAME=<arm> python predict_and_eval_rtdetr_diva.py       # PAGE-XML + DIVA score
+#
+# Stage 2 is shared with the rest of 02_2stage: the same crop segmenter turns each
+# detected box into a polygon, which is what keeps LineIU/PixelIU comparable.
+
+name: diva_cb55_rtdetr_hf
+dataset_family: diva
+
+detection:
+  framework: transformers            # not ultralytics -- see note above
+  checkpoint: PekingU/rtdetr_r50vd   # supplies the COCO-pretrained encoder + decoder
+  coco_root: ../../../00_data/DIVA-HisDB/coco_dataset_CB55
+  image_root: ../../../00_data/DIVA-HisDB/yolo_dataset_CB55/images
+  out_dir: ../../../80_models/02_2stage/diva-hisdb/detection/rtdetr_hf
+  # PvtV2 OOMs at 1408 on 8GB (stage-1 attention over a 352x352 token grid), so the
+  # whole matrix runs at 1152 -- including the stock arm, or the rows would not be
+  # comparable. Must stay divisible by 32.
+  imgsz: 1152
+  epochs: 100
+  batch: 1
+  grad_accum: 2                      # -> 10 optimizer steps/epoch, 1000 total
+  lr: 0.0001
+  weight_decay: 0.0001
+  lr_scheduler: constant             # cosine annealed to ~0 and stalled training
+  warmup_ratio: 0.0
+  max_grad_norm: 0.1
+  ema: true
+  ema_decay: 0.993
+  seed: 42
+  color_jitter: {brightness: 0.4, contrast: 0.4, saturation: 0.7, hue: 0.015}
+  arms:
+    # backbone: "" = stock R50-vd from the checkpoint; others replace the backbone
+    # while keeping the COCO encoder/decoder. num_feature_levels=3 throughout.
+    # out_indices selects stage2/3/4 (strides 8/16/32); the literal list differs
+    # because ConvNextConfig.stage_names includes 'stem' and PvtV2Config's does not.
+    rtdetr_bb_stock:    {backbone: "",         out_indices: null}
+    rtdetr_bb_convnext: {backbone: convnext,   out_indices: [2, 3, 4]}
+    rtdetr_bb_pvt_v2:   {backbone: pvt_v2,     out_indices: [1, 2, 3]}
+    # Trained on Colab (b2 does not fit locally at 1152); imported checkpoints.
+    pvt_v2_b2_rand:     {backbone: pvt_v2_b2,  out_indices: [1, 2, 3], pretrained_backbone: false}
+    pvt_v2_b2_in1k:     {backbone: pvt_v2_b2,  out_indices: [1, 2, 3], pretrained_backbone: true}
+
+prediction:
+  # Boxes must be filtered to the GT TextRegion before scoring: TASK-2 annotates only
+  # lines inside it, while coco_dataset_CB55 also labels the marginal gloss lines.
+  test_img_dir: ../../../00_data/DIVA-HisDB/CB55/img-CB55/img/public-test
+  test_xml_dir: ../../../00_data/DIVA-HisDB/CB55/PAGE-gt-CB55-TASK-2/TASK-2/public-test
+  out_xml_dir: ../../../99_evaluation/02_2stage/diva-hisdb/rtdetr_hf
+  conf: tuned_on_val                 # swept on validation, never on test
+  segm_weights: ../../../80_models/02_2stage/diva-hisdb/segmentation/crops_hybrid_unet_resnet34_cb55.pth
+  bin_thresh: 0.1
+  resize_w: 1088
+  resize_h: 128
+
+evaluation:
+  diva:
+    pred_xml_dir: ../../../99_evaluation/02_2stage/diva-hisdb/rtdetr_hf
+    gt_pixel_dir: ../../../00_data/DIVA-HisDB/CB55/pixel-level-gt-CB55/pixel-level-gt/public-test
+    gt_page_dir: ../../../00_data/DIVA-HisDB/CB55/PAGE-gt-CB55-TASK-2/TASK-2/public-test
+    img_dir: ../../../00_data/DIVA-HisDB/CB55/img-CB55/img/public-test
+    summary_csv: ../../../99_evaluation/02_2stage/diva-hisdb/rtdetr_hf/backbone_matrix.csv

@@ -28,7 +28,12 @@ if str(_HIER_PARENT) not in sys.path:
 
 HIER_VIT_BACKBONES = {
     "vit_small_patch16_224.augreg_in21k": "vit_small_patch16_224.augreg_in21k",
-    "vit_small_patch16_dinov3": "dinov3_vits16",
+    "vit_tiny_patch16_224.augreg_in21k": "vit_tiny_patch16_224.augreg_in21k",
+    # Repointed from the "dinov3_vits16" torch.hub spec to the timm one: Meta gates
+    # the hub weights, so that path raised "silently fell back to a random-init
+    # backbone" and the encoder was unusable. timm serves the same lvd1689m
+    # checkpoint ungated -- verified identical weights, 21.59M, real SFP pyramid.
+    "vit_small_patch16_dinov3": "dinov3_vits16_timm",
     # Foundation-backbone comparison aliases (small variants unless the family
     # only exposes a base model, as for RADIO v2.5).
     "dinov2": "dinov2_vits14",
@@ -37,11 +42,32 @@ HIER_VIT_BACKBONES = {
     "am-radio": "radio_v2.5-b",
 }
 
-_registered: set[str] = set()
+# encoder_name -> the (pretrained, freeze_backbone) it is currently registered
+# under. smp's encoder registry is global and keyed by name alone, so a second
+# request with different settings has to re-register rather than reuse.
+_registered: dict[str, tuple[bool, bool]] = {}
 
 
-def ensure_hier_encoder_registered(encoder_name: str) -> None:
-    if encoder_name in _registered:
+def ensure_hier_encoder_registered(
+    encoder_name: str,
+    pretrained: bool = True,
+    freeze_backbone: bool = True,
+) -> None:
+    """Register a flat ViT as an smp encoder behind hier_encoder's SFP neck.
+
+    Defaults reproduce the original behaviour (ImageNet weights, backbone frozen,
+    only the SFP neck trains) so existing runs stay reproducible. Both are worth
+    setting explicitly:
+
+    freeze_backbone=True leaves ~30M of ViT-S frozen while CNN and hierarchical-ViT
+    encoders in the same comparison train end to end -- fine for a foundation-feature
+    probe, a confound in a size or pretrain matrix.
+
+    pretrained=False is required for a random-init arm; the fallback check below is
+    skipped in that case, since a random backbone is then the intent rather than a
+    silent failure.
+    """
+    if _registered.get(encoder_name) == (pretrained, freeze_backbone):
         return
     if encoder_name not in HIER_VIT_BACKBONES:
         raise ValueError(f"{encoder_name!r} is not a known hier_encoder ViT backbone")
@@ -54,8 +80,8 @@ def ensure_hier_encoder_registered(encoder_name: str) -> None:
     hier_name = HIER_VIT_BACKBONES[encoder_name]
     cfg = EncoderConfig(
         backbone=hier_name,
-        pretrained=True,
-        freeze_backbone=True,
+        pretrained=pretrained,
+        freeze_backbone=freeze_backbone,
         feature_strategy="sfp",
     )
     register_smp_encoder(encoder_name, cfg)
@@ -63,7 +89,7 @@ def ensure_hier_encoder_registered(encoder_name: str) -> None:
     entry = smp.encoders.encoders[encoder_name]
     probe = entry["encoder"](**entry["params"])
     try:
-        if isinstance(probe.encoder.backbone, FallbackViTBackbone):
+        if pretrained and isinstance(probe.encoder.backbone, FallbackViTBackbone):
             raise RuntimeError(
                 f"{hier_name!r} silently fell back to a random-init backbone (see the "
                 f"warning printed above for the underlying loading error -- likely "
@@ -72,4 +98,4 @@ def ensure_hier_encoder_registered(encoder_name: str) -> None:
     finally:
         del probe
 
-    _registered.add(encoder_name)
+    _registered[encoder_name] = (pretrained, freeze_backbone)

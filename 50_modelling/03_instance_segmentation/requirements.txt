@@ -1,0 +1,6 @@
+# Keep this aligned with the repository root. Older Transformers versions use
+# different Swin state-dict names and silently randomize a legacy backbone.
+transformers==5.14.1
+
+# Mask2Former's Hungarian matcher requires SciPy.
+scipy>=1.13,<2

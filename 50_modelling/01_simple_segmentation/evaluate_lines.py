@@ -103,9 +103,9 @@ def to_label_map(binary):
     return lbl.astype(np.int32)
 
 
-def eval_diva_one(encoder: str, ms: str, split: str) -> dict | None:
+def eval_diva_one(encoder: str, ms: str, split: str, run: str | None = None) -> dict | None:
     spec = FAMILIES["diva"]
-    run = f"unet_{encoder}_diva_{ms}"
+    run = run or f"unet_{encoder}_diva_{ms}"
     ckpt = REPO / spec["ckpt_root"] / run / "best.pth"
     if not ckpt.exists():
         print(f"[skip] {run}: no checkpoint at {ckpt}")
@@ -172,6 +172,10 @@ def main():
     ap.add_argument("--family", choices=["diva", "udiads"], default=None, help="default: both")
     ap.add_argument("--encoders", nargs="+", default=None, help="default: all 6 backbones")
     ap.add_argument("--subsets", nargs="+", default=None, help="default: all subsets for the family")
+    ap.add_argument("--runs", nargs="+", default=None,
+                    help="DIVA only: explicit checkpoint folder names under ckpt_root, instead of the "
+                         "unet_<encoder>_diva_<subset> naming (used by run_skip_ablation.sh, whose runs "
+                         "are named skipabl_<encoder>_diva_<subset>_s<n_skips>)")
     ap.add_argument("--split", default="test")
     ap.add_argument("--out", default=str(REPO / "99_evaluation" / "01_simple_segmentation" / "lines_eval_summary.csv"))
     args = ap.parse_args()
@@ -180,6 +184,21 @@ def main():
     families = [args.family] if args.family else list(FAMILIES)
 
     rows = []
+    if args.runs:
+        if families != ["diva"]:
+            raise SystemExit("--runs is DIVA-only; pass --family diva")
+        for run in args.runs:
+            ms = args.subsets[0] if args.subsets else FAMILIES["diva"]["subsets"][0]
+            metrics = eval_diva_one(encoder=run, ms=ms, split=args.split, run=run)
+            if metrics is None:
+                continue
+            row = {"family": "diva", "encoder": run, "subset": ms, **metrics}
+            rows.append(row)
+            print(f"diva    {run:44s} {ms:12s}  " +
+                  "  ".join(f"{k}={row.get(k, float('nan')):.3f}" for k in _METRIC_KEYS))
+        _write(rows, args.out)
+        return
+
     arunet = None
     if "udiads" in families:
         arunet_pb = REPO / "80_models" / "01_simple_segmentation" / "u-diads-tl" / "pretrained" / "arunet" / "model100_ema.pb"
@@ -200,8 +219,12 @@ def main():
                 print(f"{family:7s} {enc:38s} {ms:12s}  " +
                       "  ".join(f"{k}={row.get(k, float('nan')):.3f}" for k in _METRIC_KEYS))
 
+    _write(rows, args.out)
+
+
+def _write(rows: list[dict], out_path: str) -> None:
     df = pd.DataFrame(rows)
-    out = Path(args.out)
+    out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out, index=False)
     print("\n" + "=" * 100)

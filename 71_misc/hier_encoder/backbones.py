@@ -70,6 +70,21 @@ _REGISTRY = {
         "vit_small_patch16_224.augreg_in21k", "timm_vit", 16, 384, 12, 6, 0, True,
         "vit_small_patch16_224.augreg_in21k",
     ),
+    # XS bracket partner for the size axis. 5.5M in the backbone proper; timm
+    # reports 9.7M for the checkpoint because augreg_in21k carries a 21843-class
+    # head (192 x 21843 = 4.2M) that the SFP path never uses.
+    "vit_tiny_patch16_224.augreg_in21k": BackboneSpec(
+        "vit_tiny_patch16_224.augreg_in21k", "timm_vit", 16, 192, 12, 3, 0, True,
+        "vit_tiny_patch16_224.augreg_in21k",
+    ),
+    # DINOv3 ViT-S/16 via timm instead of the "dinov3" torch.hub loader. Meta gates
+    # the hub weights, so the hub path fails and hier_encoder (correctly) refuses to
+    # fall back to random init; timm serves the same lvd1689m checkpoint ungated.
+    # 4 register tokens + CLS = 5 prefix tokens, which the timm_vit reader strips.
+    "dinov3_vits16_timm": BackboneSpec(
+        "dinov3_vits16_timm", "timm_vit", 16, 384, 12, 6, 4, True,
+        "vit_small_patch16_dinov3.lvd1689m",
+    ),
 }
 
 
@@ -336,9 +351,19 @@ class _TimmViTBackbone(BackboneWrapper):
                 stacklevel=2,
             )
         n = list(range(self.num_blocks))
-        outs = self.model.get_intermediate_layers(
-            x, n=n, reshape=False, return_prefix_tokens=False, norm=self._norm
-        )
+        if hasattr(self.model, "get_intermediate_layers"):
+            outs = self.model.get_intermediate_layers(
+                x, n=n, reshape=False, return_prefix_tokens=False, norm=self._norm
+            )
+        else:
+            # timm builds the DINOv3 ViTs on its `Eva` class, which has no
+            # get_intermediate_layers. forward_intermediates is the equivalent and
+            # already drops the prefix (return_prefix_tokens=False by default):
+            # verified at 224px / patch 16 it returns 196 = 14x14 tokens, not 201.
+            outs = self.model.forward_intermediates(
+                x, indices=n, return_prefix_tokens=False, norm=self._norm,
+                output_fmt="NLC", intermediates_only=True,
+            )
         return list(outs)
 
 
@@ -365,6 +390,15 @@ def _try_load_radio(spec: BackboneSpec, cfg: EncoderConfig) -> BackboneWrapper:
 def load_backbone(cfg: EncoderConfig) -> BackboneWrapper:
     spec = get_spec(cfg.backbone)
     if not cfg.pretrained:
+        # timm can instantiate the real architecture with random weights, so a
+        # deliberate random-init arm gets the genuine model rather than the stub.
+        # Without this, `pretrained=False` silently trains FallbackViTBackbone --
+        # a different architecture -- and any random-vs-pretrained comparison
+        # built on it is measuring the wrong thing.
+        # The hub-backed families (dinov2/dinov3/radio) have no offline
+        # architecture to build, so they still fall back.
+        if spec.kind == "timm_vit":
+            return _try_load_timm_vit(spec, cfg)
         return FallbackViTBackbone(spec, cfg)
     loaders = {
         "dinov2": _try_load_dinov2,

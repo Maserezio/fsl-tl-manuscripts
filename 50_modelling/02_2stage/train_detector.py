@@ -62,6 +62,7 @@ BACKBONES = {
     "resnet50":                            ("yaml", str(_DET / "yolov8-resnet50.yaml")),
     "convnext":                            ("yaml", str(_DET / "yolov8-convnext.yaml")),
     "convnext_dinov3":                     ("yaml", str(_DET / "yolov8-convnext-dinov3.yaml")),
+    "pvt_v2":                              ("yaml", str(_DET / "yolov8-pvt_v2.yaml")),
     "vit_small_patch16_224.augreg_in21k":  ("sfp",  "vit_small_patch16_224.augreg_in21k"),
     "vit_small_patch16_dinov3":            ("sfp",  "dinov3_vits16"),
     "dinov2":                              ("sfp",  "dinov2_vits14"),

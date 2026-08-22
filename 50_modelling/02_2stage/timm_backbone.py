@@ -40,6 +40,11 @@ BACKBONES = {
     'convnext_dinov3': dict(id='convnext_tiny.dinov3_lvd1689m', dynamic=True, nhwc=False),
     'swin':       dict(id='swin_tiny_patch4_window7_224',    dynamic=False, nhwc=True),
     'hiera':      dict(id='hiera_tiny_224.mae_in1k_ft_in1k', dynamic=False, nhwc=False),
+    # Hierarchical transformer with a genuinely dynamic input size -- unlike swin/hiera it
+    # needs no img_size pinning or stride-probe stub, so rect/multi_scale stay usable.
+    # ImageNet-only weights: no DINOv2/v3 exists for any hierarchical transformer, so this
+    # fills the "supervised hierarchical ViT" slot and cannot stand in for the SFP branch.
+    'pvt_v2':     dict(id='pvt_v2_b2.in1k',                  dynamic=True,  nhwc=False),
 }
 STRIDES = (8, 16, 32)
 
