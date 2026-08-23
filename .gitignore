@@ -2,8 +2,13 @@
 .claude/
 .github/
 .vscode/
-*.pyc
-*.log
+
 00_data/
 80_models/
 99_evaluation/
+90_logs/
+
+*.pyc
+*.log
+*.png
+*.xml

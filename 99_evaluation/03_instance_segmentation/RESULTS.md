@@ -55,3 +55,11 @@ an extra `encoder.backbone` state-dict level. Vanilla `from_pretrained`
 silently leaves 227 backbone tensors random. The loader repairs that wrapper
 exactly, but the correctly converted old Latin14396 checkpoint still scored
 Line IU 0, so none of the best runs use it.
+
+## Post-processing note
+
+For dense subsets, postprocessing merges horizontally aligned mask fragments
+across vertical tile seams (`2%` seam band and `0.5` minimum vertical overlap,
+selected on validation). It changes instance IDs but not mask pixels. Training
+ran from `facebook/mask2former-swin-tiny-coco-instance`; the notebook supports
+BF16 Colab GPUs and T4 FP16 through GradScaler.

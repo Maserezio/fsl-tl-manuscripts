@@ -510,6 +510,9 @@ def train_subset(args: argparse.Namespace, subset: str, run_name: str) -> Path:
                             "checkpoint_score_threshold": args.checkpoint_score_threshold,
                             "checkpoint_mask_threshold": args.checkpoint_mask_threshold,
                             "checkpoint_nms_threshold": args.checkpoint_nms_threshold,
+                            "stitch_tile_instances": args.stitch_tile_instances,
+                            "stitch_seam_band_ratio": args.stitch_seam_band_ratio,
+                            "stitch_min_vertical_overlap": args.stitch_min_vertical_overlap,
                             "seed": args.seed,
                         },
                         indent=2,
@@ -649,6 +652,97 @@ def post_process_text_line_instances(
     return segmentation.cpu().numpy()
 
 
+def stitch_vertical_tile_instances(
+    instance_map: np.ndarray,
+    vertical_tiles: int,
+    seam_band_ratio: float = 0.02,
+    min_vertical_overlap: float = 0.5,
+) -> np.ndarray:
+    """Merge text-line fragments split by vertical tile seams.
+
+    Candidates must end/start near the same seam. Pairs are matched greedily
+    by overlap of their vertical bounding-box intervals, which is appropriate
+    for horizontal text lines and avoids using annotations at inference time.
+    The masks themselves are not dilated or otherwise changed; only their
+    instance IDs are unified.
+    """
+    if vertical_tiles <= 1 or instance_map.max() == 0:
+        return instance_map
+    if not 0 <= seam_band_ratio <= 0.5:
+        raise ValueError("seam_band_ratio must be between 0 and 0.5")
+    if not 0 <= min_vertical_overlap <= 1:
+        raise ValueError("min_vertical_overlap must be between 0 and 1")
+
+    max_label = int(instance_map.max())
+    parents = np.arange(max_label + 1, dtype=np.int32)
+
+    def find(label: int) -> int:
+        while parents[label] != label:
+            parents[label] = parents[parents[label]]
+            label = int(parents[label])
+        return label
+
+    def union(first: int, second: int) -> None:
+        first_root, second_root = find(first), find(second)
+        if first_root != second_root:
+            parents[second_root] = first_root
+
+    boxes = {}
+    for label, slices in enumerate(ndimage.find_objects(instance_map), start=1):
+        if slices is not None:
+            boxes[label] = (
+                slices[1].start,
+                slices[0].start,
+                slices[1].stop,
+                slices[0].stop,
+            )
+
+    _, width = instance_map.shape
+    band = max(2, int(round(width * seam_band_ratio)))
+    seams = [int(width * index / vertical_tiles) for index in range(1, vertical_tiles)]
+    for seam in seams:
+        left = [
+            label
+            for label, box in boxes.items()
+            if box[0] < seam and box[2] >= seam - band
+        ]
+        right = [
+            label
+            for label, box in boxes.items()
+            if box[0] >= seam and box[0] <= seam + band
+        ]
+        candidates = []
+        for left_label in left:
+            left_box = boxes[left_label]
+            for right_label in right:
+                right_box = boxes[right_label]
+                overlap = max(
+                    0,
+                    min(left_box[3], right_box[3]) - max(left_box[1], right_box[1]),
+                )
+                smaller_height = max(
+                    1,
+                    min(left_box[3] - left_box[1], right_box[3] - right_box[1]),
+                )
+                score = overlap / smaller_height
+                if score >= min_vertical_overlap:
+                    candidates.append((score, left_label, right_label))
+
+        used_left, used_right = set(), set()
+        for _, left_label, right_label in sorted(candidates, reverse=True):
+            if left_label not in used_left and right_label not in used_right:
+                union(left_label, right_label)
+                used_left.add(left_label)
+                used_right.add(right_label)
+
+    lookup = np.arange(max_label + 1, dtype=np.int32)
+    for label in range(1, max_label + 1):
+        lookup[label] = find(label)
+    merged = lookup[instance_map]
+    _, dense_labels = np.unique(merged, return_inverse=True)
+    return dense_labels.reshape(instance_map.shape).astype(np.uint16)
+
+
 def validation_instance_metrics(
     model: Mask2FormerForUniversalSegmentation,
     processor: Mask2FormerImageProcessor,
@@ -705,6 +799,13 @@ def validation_instance_metrics(
             gt_path = resolve_split_dir(
                 args.data_root / subset / f"text-line-gt-{subset}", "val"
             ) / f"{metadata['stem']}.png"
+            if args.stitch_tile_instances:
+                prediction = stitch_vertical_tile_instances(
+                    prediction,
+                    args.train_vertical_tiles,
+                    args.stitch_seam_band_ratio,
+                    args.stitch_min_vertical_overlap,
+                )
             gt_binary = np.asarray(Image.open(gt_path).convert("L")) > 0
             rows.append(zottin_metrics(gt_binary, prediction))
 
@@ -791,6 +892,13 @@ def predict_subset(
                     tile_map[foreground] += instance_offset
                     pred_instances[:, left:right] = tile_map
                     instance_offset = int(pred_instances.max())
+                if args.stitch_tile_instances:
+                    pred_instances = stitch_vertical_tile_instances(
+                        pred_instances,
+                        args.vertical_tiles,
+                        args.stitch_seam_band_ratio,
+                        args.stitch_min_vertical_overlap,
+                    )
             Image.fromarray(pred_instances, mode="I;16").save(instance_dir / f"{metadata['stem']}.png")
             instance_count = int(np.count_nonzero(np.unique(pred_instances)))
 
@@ -825,6 +933,9 @@ def predict_subset(
         "pages": len(rows),
         "postprocess": args.postprocess,
         "vertical_tiles": args.vertical_tiles,
+        "stitch_tile_instances": args.stitch_tile_instances,
+        "stitch_seam_band_ratio": args.stitch_seam_band_ratio,
+        "stitch_min_vertical_overlap": args.stitch_min_vertical_overlap,
         "score_threshold": args.score_threshold,
         "mask_threshold": args.mask_threshold,
         "nms_threshold": args.nms_threshold if args.postprocess == "textline" else None,
@@ -872,6 +983,24 @@ def add_common_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--amp", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--stitch-tile-instances",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Merge horizontally aligned instance fragments across vertical tile seams",
+    )
+    parser.add_argument(
+        "--stitch-seam-band-ratio",
+        type=float,
+        default=0.02,
+        help="Fraction of page width searched on each side of a vertical tile seam",
+    )
+    parser.add_argument(
+        "--stitch-min-vertical-overlap",
+        type=float,
+        default=0.5,
+        help="Minimum y-interval overlap over the smaller fragment height for stitching",
+    )
 
 
 def add_train_arguments(parser: argparse.ArgumentParser) -> None:
