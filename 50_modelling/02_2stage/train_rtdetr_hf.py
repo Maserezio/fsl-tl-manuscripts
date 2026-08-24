@@ -148,6 +148,119 @@ _PRETRAINED = {                              # (backbone, init) -> HF checkpoint
     ("pvt_v2_b1", "imagenet"):     "OpenGVLab/pvt_v2_b1",
     ("pvt_v2_b2", "imagenet"):     "OpenGVLab/pvt_v2_b2",
 }
+# HF publishes no ConvNeXt below `tiny`, so the ImageNet arms for femto/pico can only
+# come from timm. Same graph, different names -- _timm_convnext_to_hf renames the keys.
+_TIMM_PRETRAINED = {
+    ("convnext_femto", "imagenet"): "convnext_femto.d1_in1k",
+    ("convnext_pico", "imagenet"):  "convnext_pico.d1_in1k",
+}
+
+
+# Plain ViTs have no feature pyramid, so RT-DETR cannot take them directly. The
+# hier_encoder package under 71_misc/ bolts a ViTDet-style Simple Feature Pyramid
+# onto them, producing real 8/16/32 strides. Weights come from timm -- the direct
+# Meta download for dinov3 is gated (HTTP 403) and silently falls back to random.
+_SFP_BACKBONES = {                          # (backbone, init) -> hier_encoder name
+    ("vit_tiny", "random"):     "vit_tiny_patch16_224.augreg_in21k",
+    ("vit_tiny", "imagenet"):   "vit_tiny_patch16_224.augreg_in21k",
+    ("vit_small", "random"):    "vit_small_patch16_224.augreg_in21k",
+    ("vit_small", "imagenet"):  "vit_small_patch16_224.augreg_in21k",
+    ("vit_small", "dinov3"):    "dinov3_vits16_timm",
+}
+_SFP_CHANNELS = 256                          # SFP emits this on every level
+
+
+def _build_sfp_model(backbone, init, id2label, label2id):
+    """RT-DETR with a flat ViT + SFP neck in place of the hierarchical backbone."""
+    import torch.nn.functional as F
+    from transformers import AutoModelForObjectDetection, ResNetConfig, RTDetrConfig
+
+    sys.path.insert(0, str(REPO_ROOT / "71_misc"))
+    from hier_encoder import EncoderConfig, build_hierarchical_encoder
+
+    encoder = build_hierarchical_encoder(EncoderConfig(
+        backbone=_SFP_BACKBONES[(backbone, init)],
+        pretrained=(init != "random"),
+        freeze_backbone=False,
+        feature_strategy="sfp",
+        out_strides=(8, 16, 32),
+        out_channels=(_SFP_CHANNELS,) * 3,
+        include_stride2=False,
+        img_size=(IMAGE_SIZE, IMAGE_SIZE)))
+
+    class SFPBackbone(torch.nn.Module):
+        """hier_encoder's stride-keyed dict -> RT-DETR's (feature_map, mask) pairs."""
+
+        def __init__(self, enc):
+            super().__init__()
+            self.encoder = enc
+            self.intermediate_channel_sizes = [_SFP_CHANNELS] * 3
+
+        def forward(self, pixel_values, pixel_mask=None):
+            out = []
+            for feature_map in self.encoder(pixel_values).values():
+                if pixel_mask is None:
+                    mask = torch.ones(feature_map.shape[0], *feature_map.shape[-2:],
+                                      dtype=torch.bool, device=feature_map.device)
+                else:
+                    mask = F.interpolate(pixel_mask[None].float(),
+                                         size=feature_map.shape[-2:]).to(torch.bool)[0]
+                out.append((feature_map, mask))
+            return out
+
+    # The COCO encoder/decoder are kept; only the backbone and the input projections
+    # (channel counts change to SFP's uniform 256) are replaced.
+    base = RTDetrConfig.from_pretrained(CHECKPOINT).to_dict()
+    for key in ("backbone_config", "backbone", "use_timm_backbone", "use_pretrained_backbone",
+                "backbone_kwargs", "num_feature_levels", "num_labels", "id2label",
+                "label2id", "architectures", "model_type", "transformers_version"):
+        base.pop(key, None)
+    cfg = RTDetrConfig(**base, backbone_config=ResNetConfig(out_indices=[2, 3, 4]),
+                       use_timm_backbone=False, num_feature_levels=3,
+                       num_labels=len(id2label), id2label=id2label, label2id=label2id)
+    model = AutoModelForObjectDetection.from_pretrained(
+        CHECKPOINT, config=cfg, ignore_mismatched_sizes=True)
+    model.model.backbone = SFPBackbone(encoder)
+    model.model.encoder_input_proj = torch.nn.ModuleList([
+        torch.nn.Sequential(torch.nn.Conv2d(_SFP_CHANNELS, cfg.d_model, 1, bias=False),
+                            torch.nn.BatchNorm2d(cfg.d_model)) for _ in range(3)])
+    print(f"  SFP backbone {_SFP_BACKBONES[(backbone, init)]} "
+          f"({'pretrained' if init != 'random' else 'random'})")
+    return model
+
+
+def _timm_convnext_to_hf(timm_sd):
+    """timm ConvNeXt state_dict -> HF ConvNextBackbone naming (pure rename)."""
+    import re
+    out = {}
+    for key, value in timm_sd.items():
+        if key.startswith("head."):               # classifier, not part of the backbone
+            continue
+        if key.startswith("stem."):
+            index, tail = key.split(".")[1], key.split(".", 2)[2]
+            name = "patch_embeddings" if index == "0" else "layernorm"
+            out[f"embeddings.{name}.{tail}"] = value
+            continue
+        block = re.match(r"stages\.(\d+)\.blocks\.(\d+)\.(.+)", key)
+        if block:
+            stage, layer, tail = block.groups()
+            tail = (tail.replace("gamma", "layer_scale_parameter")
+                        .replace("conv_dw", "dwconv")
+                        .replace("mlp.fc1", "pwconv1")
+                        .replace("mlp.fc2", "pwconv2"))
+            if tail.startswith("norm."):
+                tail = "layernorm." + tail[len("norm."):]
+            # timm keeps the pointwise convs as 1x1 Conv2d (out, in, 1, 1); HF uses
+            # Linear (out, in). Identical operation, so drop the singleton dims.
+            if tail.startswith(("pwconv1.weight", "pwconv2.weight")) and value.dim() == 4:
+                value = value.squeeze(-1).squeeze(-1)
+            out[f"encoder.stages.{stage}.layers.{layer}.{tail}"] = value
+            continue
+        down = re.match(r"stages\.(\d+)\.downsample\.(\d+)\.(.+)", key)
+        if down:
+            stage, index, tail = down.groups()
+            out[f"encoder.stages.{stage}.downsampling_layer.{index}.{tail}"] = value
+    return out
 IMAGE_SIZE = int(os.environ.get("IMAGE_SIZE", "1408"))
 
 # Few-shot: train on only K labeled pages instead of the whole train split.
@@ -401,12 +514,15 @@ def build_model(id2label, label2id):
 
     from transformers import AutoBackbone, AutoConfig, ConvNextConfig, PvtV2Config, RTDetrConfig
 
+    if (BACKBONE, INIT) in _SFP_BACKBONES:
+        return _build_sfp_model(BACKBONE, INIT, id2label, label2id)
+
     ckpt = _PRETRAINED.get((BACKBONE, INIT))
-    if INIT != "random" and ckpt is None:
+    timm_ckpt = _TIMM_PRETRAINED.get((BACKBONE, INIT))
+    if INIT != "random" and ckpt is None and timm_ckpt is None:
         raise SystemExit(
-            f"no HF checkpoint for {BACKBONE!r}+{INIT!r}. Known: "
-            f"{sorted(_PRETRAINED)}. ConvNeXt femto/pico are random-only -- HF "
-            f"publishes nothing below tiny.")
+            f"no checkpoint for {BACKBONE!r}+{INIT!r}. Known HF: {sorted(_PRETRAINED)}; "
+            f"known timm: {sorted(_TIMM_PRETRAINED)}.")
 
     if BACKBONE in _CONVNEXT_ARCH:
         # hidden_sizes forced to a list: ConvNextBackbone does
@@ -434,7 +550,24 @@ def build_model(id2label, label2id):
     model = AutoModelForObjectDetection.from_pretrained(
         CHECKPOINT, config=cfg, ignore_mismatched_sizes=True)
 
-    if ckpt:
+    if timm_ckpt:
+        import timm
+        source = timm.create_model(timm_ckpt, pretrained=True).state_dict()
+        mapped = _timm_convnext_to_hf(source)
+        inner = model.model.backbone
+        inner = inner.model if hasattr(inner, "model") else inner
+        missing, unexpected = inner.load_state_dict(mapped, strict=False)
+        # hidden_states_norms have no timm counterpart; they are freshly initialised
+        # for the HF-native grafts too (facebook/convnext-tiny-224 ships them at 1.0/0.0).
+        leftover = [k for k in missing if "hidden_states_norm" not in k]
+        if leftover or unexpected:
+            raise RuntimeError(
+                f"timm graft mismatch for {timm_ckpt}: {len(leftover)} missing, "
+                f"{len(unexpected)} unexpected (first missing: {leftover[:3]})")
+        key = next(k for k, v in mapped.items() if v.dim() > 1)
+        assert torch.allclose(inner.state_dict()[key], mapped[key]), "timm graft did not take"
+        print(f"  grafted {INIT} weights from timm:{timm_ckpt}")
+    elif ckpt:
         ref = AutoBackbone.from_pretrained(ckpt, out_indices=bb.out_indices)
         inner = model.model.backbone
         inner = inner.model if hasattr(inner, "model") else inner
