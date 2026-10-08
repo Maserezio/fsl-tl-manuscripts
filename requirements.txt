@@ -2,7 +2,7 @@
 #
 # Derived by AST-scanning every .py and .ipynb in 50_modelling/ and 71_misc/ for actual
 # imports -- not from the 308-package dev venv, most of which is unused (detectron2,
-# mmdet, rfdetr, clearml, mlflow, wandb, optuna, lightly_train, dh_segment, ...).
+# mmdet, clearml, mlflow, wandb, optuna, lightly_train, dh_segment, ...).
 #
 # Not installable via pip: the DIVA/HisDB layout evaluators shell out to a JRE
 # (50_modelling/*/evaluate.py), so `apt install default-jre` on a fresh machine.

@@ -1,161 +1,59 @@
-# Few-shot text line segmentation for historical manuscripts — RQ1 work plan
+# Few-shot text line segmentation for historical manuscripts — experiments
 
-RQ1: backbone comparison. Two axes per track, run on both datasets.
+Code, models, and results of the master's thesis. Every experiment is started through `./run.sh` (see below).
 
-**Datasets** — DIVA-HisDB (`CB55`, `CS18`, `CS863`), U-DIADS-TL (`Latin14396`, `Latin2`, `Syr341`).
-**Metrics** — Pixel IU, Line IU, DR, RA, FM.
+## Layout
 
-Status: **done** = trained and scored · **partial** = some subsets only · **todo** = not started.
-A cell counts as done only when every subset of that dataset is scored under one shared recipe.
+```
+00_data/                        datasets (DIVA-HisDB, U-DIADS-TL, CATMuS, cBAD, RQ3 collections and their splits)
+  scripts/                      dataset converters (PAGE XML / masks -> COCO, YOLO, previews, audits)
+50_modelling/
+  common/                       shared code: few-shot page selection, hier_encoder backbones, evaluation helpers
+  semantic_segmentation/
+    unet/                       U-Net with projection cuts (training, inference, postprocessing, Colab generators)
+    center_line/                center-line model (LineField U-Net, decoders, CATMuS pretraining, WiSE-FT,
+                                DIVA-HisDB and RQ3 runs)
+  instance_segmentation/
+    rtdetr_bbox_unet/           RT-DETR detector + BBox U-Net (crop segmenter), CATMuS pretraining notebook
+    mask_rcnn/                  Mask R-CNN (DIVA-HisDB, U-DIADS-TL, CATMuS pretraining, cBAD distillation)
+      cross_collection/         RQ3 Mask R-CNN runs (zero-shot, single collection, LOCO, WiSE-FT)
+    dp_seam/                    dynamic-programming seam for the masks of detected lines
+  legacy_runners/               run_rq3_wise_test.sh only (WiSE-FT of Mask R-CNN in RQ3, not ported to run.sh)
+80_models/                      checkpoints, same semantic_segmentation/... instance_segmentation/... layout
+99_evaluation/                  predictions and metrics, same layout
+  summaries/                    aggregated tables (RQ2 manifest, curves, ...)
+  scripts/                      table fillers for the thesis
+  analysis/                     analyses and figures of chapters 3-6 (error types, glosses, word gaps, HTR, ...)
+  logs/                         run logs
+run.sh                          single entry point
+```
 
-DINO SSL exists only in bracket M — the smallest published DINOv3 ConvNeXt is tiny
-(27.8M), the smallest DINOv3/DINOv2 ViT is small (~21M), and no SSL weights exist for
-hierarchical ViTs at any size. Those cells are marked `n/a`, not `todo`.
+The analysis scripts and the center-line modules import each other; `_paths.py` in both folders puts
+`50_modelling/semantic_segmentation/center_line`, `99_evaluation/analysis` and `50_modelling/common` on `sys.path`.
 
----
+## Thesis pipelines
 
-## 01. Simple segmentation (semantic)
-
-SMP U-Net. Baseline outside the matrix: `resnet34` (21.3M).
-
-### Pretrain axis (bracket M)
-
-| family | backbone | Random | ImageNet | DINO SSL |
-|---|---|---|---|---|
-| CNN | `tu-convnext_tiny` 27.8M | IN: **done** · DIVA: todo | IN: **done** · DIVA: todo | IN: **done** · DIVA: todo |
-| ViT hier. | `tu-pvt_v2_b2` 24.9M | IN: **done** · DIVA: todo | IN: **done** · DIVA: todo | `n/a` |
-| ViT flat (SFP) | `vit_small_patch16` 21.7M | IN: **done** · DIVA: todo | IN: **done** · DIVA: todo | IN: **done** · DIVA: todo |
-
-SSL checkpoints: `tu-convnext_tiny.dinov3_lvd1689m`, `vit_small_patch16_dinov3`.
-
-### Size axis (Random / ImageNet)
-
-| bracket | CNN | ViT hier. | ViT flat (SFP) |
+| Thesis name | Code | Models | Results |
 |---|---|---|---|
-| XS | `tu-convnext_femto` 4.8M | `tu-pvt_v2_b0` 3.4M | `vit_tiny_patch16` 5.5M |
-| S | `tu-convnext_pico` 8.5M | `tu-pvt_v2_b1` 13.5M | — |
-| M | `tu-convnext_tiny` 27.8M | `tu-pvt_v2_b2` 24.9M | `vit_small_patch16` 21.7M |
+| U-Net with projection cuts | `50_modelling/semantic_segmentation/unet` | `80_models/semantic_segmentation/unet` | `99_evaluation/semantic_segmentation/unet` |
+| Center-line model | `50_modelling/semantic_segmentation/center_line` | `80_models/semantic_segmentation/center_line` | `99_evaluation/semantic_segmentation/center_line` |
+| RT-DETR + BBox U-Net | `50_modelling/instance_segmentation/rtdetr_bbox_unet` | `80_models/instance_segmentation/rtdetr_bbox_unet` | `99_evaluation/instance_segmentation/rtdetr_bbox_unet` |
+| Mask R-CNN (+ BBox U-Net on U-DIADS-TL) | `50_modelling/instance_segmentation/mask_rcnn` | `80_models/instance_segmentation/mask_rcnn` | `99_evaluation/instance_segmentation/mask_rcnn` |
+| DP seam | `50_modelling/instance_segmentation/dp_seam` | — | `99_evaluation/instance_segmentation/dp_seam` |
 
-| dataset | status |
-|---|---|
-| U-DIADS-TL | **done** — 8 encoders x 2 arms x 3 subsets = 48 cells |
-| DIVA-HisDB | **todo** — no size-axis runs exist |
+## Running
 
-### Additional (outside both axes)
+```
+./run.sh help
+./run.sh rq1-rtdetr "catmus" "convnext_tiny"      # RQ1, one initialization and encoder
+./run.sh rq1-maskrcnn convnext_tiny_catmus
+./run.sh pretrain rtdetr convnext_tiny             # CATMuS pretraining (1152 px, 30 epochs)
+./run.sh rq2-maskrcnn                              # all 77 page sets of the RQ2 manifest
+./run.sh rq3-centerline test                       # cache + score the RQ3 center-line models on the test pages
+./run.sh figures                                   # regenerate the thesis figures
+```
 
-| backbone | U-DIADS-TL | DIVA-HisDB |
-|---|---|---|
-| `dinov2` (ViT-S/14, SFP) | todo | **done** (CB55, CS18) |
-| `dinov2_reg` (ViT-S/14 +reg, SFP) | todo | **done** (CB55, CS18) |
-| `am-radio` (RADIO v2.5-B, SFP) | partial (Latin2 only) | todo |
+All commands skip finished runs. Long runs: `systemd-inhibit --what=sleep:idle ./run.sh ...`.
+U-Net runs and parts of RQ2 were trained on Colab; `./run.sh rq1-unet` and `./run.sh pretrain colab` write those notebooks.
 
-### Loss study — BCE / Tversky / SuperVoxel
-
-| dataset | status |
-|---|---|
-| U-DIADS-TL | **todo** — whole matrix trained on BCE (`supervoxel.enabled: false`, `lambda_boundary: 0`) |
-| DIVA-HisDB | **todo** |
-
-### Legacy runs, not part of any axis
-
-`resnet34`, `resnet50`, `efficientnet-b4`, `mit_b2`, plain `tu-convnext_tiny`, `tu-pvt_v2_b2`
-on U-DIADS-TL are HPO-tuned (60 or 200 epochs, per-encoder lr / weight decay /
-lambda_boundary). Not comparable with the fixed-recipe matrix; kept for reference only.
-
----
-
-## 02. Two-stage (bbox detector + crop segmentor)
-
-### RT-DETR — pretrain axis (bracket M)
-
-| family | backbone | Random | ImageNet | DINO SSL |
-|---|---|---|---|---|
-| CNN | `ConvNextConfig` tiny 27.8M | CB55: **done** | todo | todo (`dinov3-convnext-tiny`) |
-| ViT hier. | `PvtV2Config` b2 24.9M | CB55: **done** | CB55: **done** | `n/a` |
-| ViT flat (SFP) | `ViTConfig` small 21.7M | todo | todo | todo (`dinov3-vits16`) |
-
-Baseline outside the matrix: stock R50-vd COCO 23.5M — CB55 **done**.
-
-### RT-DETR — size axis (Random / ImageNet)
-
-| bracket | CNN | ViT hier. | ViT flat (SFP) |
-|---|---|---|---|
-| XS | `ConvNextConfig` femto 5.2M | `PvtV2Config` b0 3.4M | `ViTConfig` tiny 5.7M |
-| S | `ConvNextConfig` pico 9.0M | `PvtV2Config` b1 13.1M | — |
-| M | `ConvNextConfig` tiny 27.8M | `PvtV2Config` b2 24.9M | `ViTConfig` small 21.7M |
-
-| dataset | status |
-|---|---|
-| DIVA-HisDB | **partial** — CB55 only, and only b0 / b2 / ConvNeXt-tiny / stock. CS18, CS863 todo |
-| U-DIADS-TL | **todo** |
-
-### YOLO — reference track, not an RQ1 axis
-
-| arm | status |
-|---|---|
-| detector size (YOLOv8 n/s/m) | **done** — metrics in training logs |
-| pretrain (DINO distill / cBAD / COCO / random) | **done** — CB55 |
-| swappable backbones (10 encoders x 3 DIVA subsets) | **done** — `02_2stage/detection_eval.csv` |
-| zero-shot / cross-collection (bbox only) | **partial** — cBAD to CB55 |
-
-### Second-stage segmentor
-
-| item | status |
-|---|---|
-| U-Net loss study (BCE / Tversky / SuperVoxel) | **done** — CB55 |
-| architecture sweep (6 variants) | **done** — CB55 |
-
-### Additional detectors
-
-| model | status |
-|---|---|
-| RF-DETR | **done** — CB55, archived under `80_models/.../detection/_archive/` |
-| LT-DETR, DEIM, TAO-DETR | todo |
-| Catmus pretraining | todo |
-
----
-
-## 03. Instance segmentation
-
-Mask2Former (HF), swappable backbones. Baseline outside the matrix: Swin-T COCO 28M — todo.
-
-### Pretrain axis (bracket M)
-
-| family | backbone | Random | ImageNet | DINO SSL |
-|---|---|---|---|---|
-| CNN | `ConvNextConfig` tiny 27.8M | todo | todo | todo |
-| ViT hier. | `PvtV2Config` b2 24.9M | todo | todo | `n/a` |
-| ViT flat (SFP) | `ViTConfig` small 21.7M | todo | todo | todo |
-
-### Size axis (Random / ImageNet)
-
-| bracket | CNN | ViT hier. | ViT flat (SFP) |
-|---|---|---|---|
-| XS | `ConvNextConfig` femto 5.2M | `PvtV2Config` b0 3.4M | `ViTConfig` tiny 5.7M |
-| S | `ConvNextConfig` pico 9.0M | `PvtV2Config` b1 13.1M | — |
-| M | `ConvNextConfig` tiny 27.8M | `PvtV2Config` b2 24.9M | `ViTConfig` small 21.7M |
-
-| dataset | status |
-|---|---|
-| DIVA-HisDB | **todo** — two R50 runs exist (CS18, CS863) but score LineIU 0.02-0.04 |
-| U-DIADS-TL | **todo** — 4 checkpoints on Latin14396 (resnet-34/50, swin-t), never scored |
-
-### Additional (not matrix cells)
-
-| model | status |
-|---|---|
-| YOLOv8m-seg | **done** — Mask mAP50 0.955 |
-| RF-DETR-Seg | todo |
-| EoMT | todo |
-
----
-
-## Where things live
-
-| what | path |
-|---|---|
-| training scripts | `50_modelling/{01_simple_segmentation,02_2stage}/` |
-| checkpoints | `80_models/` |
-| metrics, PAGE-XML | `99_evaluation/` |
-| U-DIADS size-axis results | `99_evaluation/01_simple_segmentation/u-diads-tl/size_axis_results.md` |
-| RT-DETR backbone results | `99_evaluation/02_2stage/diva-hisdb/rtdetr_hf/` |
+Environment: `.venv` (Python 3.12, torch 2.9, transformers 5.14.1); DIVA evaluator jar in `~/Thesis/DIVA_Line_Segmentation_Evaluator`.

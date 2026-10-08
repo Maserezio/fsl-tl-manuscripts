@@ -1,6 +1,0 @@
-path: ../../../../00_data/DIVA-HisDB/yolo_dataset_CB55
-train: images/train
-val: images/val
-test: images/test
-names:
-  0: textline

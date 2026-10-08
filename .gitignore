@@ -3,12 +3,38 @@
 .github/
 .vscode/
 
-00_data/
+# data, checkpoints, predictions: local only
+00_data/*
+!00_data/scripts/
 80_models/
-99_evaluation/
-90_logs/
+99_evaluation/*
+!99_evaluation/README.md
+!99_evaluation/scripts/
+!99_evaluation/summaries/
+!99_evaluation/analysis/
+# analysis: code only (outputs, caches, figures stay local)
+99_evaluation/analysis/**
+!99_evaluation/analysis/**/
+!99_evaluation/analysis/**/*.py
+!99_evaluation/analysis/**/*.md
+
+# shell scripts: local only, except the entry point
+*.sh
+!/run.sh
 
 *.pyc
+__pycache__/
 *.log
 *.png
 *.xml
+*.pt
+*.pth
+*.pkl
+*.npy
+texput.log
+*.sh
+*.csv
+*.json
+*.yaml
+*.md
+*.tex
